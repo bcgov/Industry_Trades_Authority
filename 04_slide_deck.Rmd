@@ -1,0 +1,64 @@
+---
+title: \textcolor{black}{Apprenticeship Registrations and Certifications}
+subtitle: \textcolor{black}{`r tsibble::yearquarter(lubridate::today()-30)`}
+author: "Labour Market Information Office"
+institute: "Contact: Richard.Martin@gov.bc.ca"
+date: "https://github.com/bcgov/Industry_Trades_Authority"
+header-includes: 
+- \definecolor{bcblue}{HTML}{1f4181}
+- \definecolor{bcyellow}{HTML}{ffba2a}
+- \setbeamercolor*{palette primary}{use=structure,fg=white,bg=bcblue}
+- \setbeamercolor*{palette quaternary}{use=structure,fg=white,bg=bcyellow}
+- \setbeamercolor{title}{fg=bcblue}
+- \setbeamercolor{frametitle}{fg=bcblue}
+- \useoutertheme{split}
+output:
+  beamer_presentation:
+    theme: "Boadilla"
+    fonttheme: "structurebold"
+classoption: "aspectratio=169"    
+---
+## Slide with Table, Figure and Text
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Picture title} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+library(ggplot2)
+mt <- ggplot(mtcars, aes(mpg)) + geom_density(alpha=.2, fill="#FF6666") +
+theme(axis.title.x = element_text(size=10),axis.text.x  = element_text(size=8),
+axis.title.y = element_text(size=10),axis.text.y  = element_text(size=8))
+mt
+```
+::::
+:::: column
+- Here is some Bullet Text
+- And some more
+    - Subtext
+    - More Subtext
+::::
+:::
+## Slide with Table, Figure and Text
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Picture title} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+library(ggplot2)
+mt <- ggplot(mtcars, aes(mpg)) + geom_density(alpha=.2, fill="#FF6666") +
+theme(axis.title.x = element_text(size=10),axis.text.x  = element_text(size=8),
+axis.title.y = element_text(size=10),axis.text.y  = element_text(size=8))
+mt
+```
+::::
+:::: column
+- Here is some Bullet Text
+- And some more
+    - Subtext
+    - More Subtext
+::::
+:::
+
+

@@ -1,0 +1,296 @@
+---
+title: "`r params$doc_title`"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    css: style.css
+    source_code: https://github.com/bcgov/Industry_Trades_Authority
+params:
+  doc_title: "Forecasts of Industry Trade Authority new apprenticeship registrations"
+---
+
+```{r}
+library(flexdashboard)
+library(knitr)
+library(tidyverse)
+library(crosstalk)
+library(DT)
+library(plotly)
+library(here)
+#functions--------------
+ts_plot <- function(tbbl){
+  plt <- ggplot(tbbl, aes(Year, 
+                                Value, 
+                                group=Forecast, 
+                                colour=Forecast,
+                                text=paste0(Drname,
+                                            "/",
+                                            Group,
+                                            "/",
+                                            Year,
+                                            ":\n ",
+                                            Forecast,
+                                            " = ",
+                                            scales::comma(Value,accuracy = 1))))+
+  geom_line()+
+  scale_y_continuous(labels=scales::comma)+
+  theme_minimal()+
+  labs(x="",
+       y="New Registrations")
+  plt 
+}
+
+fcast_tbbl <- read_csv(here("temp","fcast_tbbl.csv"))%>%
+  arrange(drname,  group, year)%>%
+  mutate(across(c(prop_reg, prop_reg_utilized), function(x) round(x, 3)),
+         across(c(new_reg,
+            employment,
+            demand_driven_fcast,
+            obs_and_fcast,
+            scaled_up,
+            unadjusted_forecast,
+            covid,
+            pre_covid,
+            gap,
+            adjusted_forecast),  function(x) scales::comma(x, accuracy=1))
+         )
+colnames(fcast_tbbl) <- wrapR::make_title(colnames(fcast_tbbl))
+shared_fcast <- SharedData$new(fcast_tbbl)
+
+for_plots <- read_csv(here("temp","for_plots.csv"))%>%
+  mutate(forecast=str_to_title(str_replace_all(forecast, "_"," ")))
+colnames(for_plots) <- wrapR::make_title(colnames(for_plots))
+
+page_titles <- c("Title Page",#replace with your page titles
+                 "Methodology",
+                 "All groups, British Columbia",
+                 "All groups, by region",
+                 "British Columbia, by group",
+                 "Lower Mainland Southwest",
+                 "Vancouver Island and Coast",
+                 "South East",
+                 "North",
+                 "Data table"
+                 )
+
+```
+
+# `r page_titles[1]` {data-navmenu="Table of Contents"}
+
+## Row {data-height="600"}
+
+```{r, out.width = "150%"}
+knitr::include_graphics("aest.png")#the cover image
+```
+
+## Row {data-height="400"}
+
+### 
+
+<h1 class="center">
+
+`r params$doc_title`.
+
+</h1>
+
+# `r page_titles[2]` {data-navmenu="Table of Contents"}
+
+## Row
+
+```{r}
+# for methodology explanation.
+fcast_tbbl%>%
+  filter(Drname=="British Columbia",
+         Group=="All groups",
+         Year<lubridate::year(lubridate::today()+lubridate::years(2)))%>%
+   DT::datatable(
+    rownames = FALSE,
+    escape = FALSE,
+    extensions = c('Buttons', 'FixedColumns'),
+    class = 'cell-border stripe',
+    options = list(
+    dom = 't',
+    scrollX = TRUE))
+```
+
+## Row
+
+### Methodology
+
+*  For example, consider the data above (all trades groups, all regions).
+*  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**.  Note that there are values only for complete years: incomplete and future years are absent.
+*   **Employment** is from the LMO forecast, upon which we build the demand-driven forecast of new apprenticeship registrations.
+*   **Prop Reg** gives the proportion of observed **New Reg** relative to **Employment**.
+*   **Prop Reg Utilized** is the average of **Prop Reg** for the years 2018 and 2019.
+*   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
+*   **Obs And Fcast** equals **New Reg** (for complete years) and **Demand Driven Fcast** otherwise.
+*   **Scaled Up** is the monthly average for the last (incomplete year) times 12.
+*   **Unadjusted Forecast** equals **Obs And Fcast**, with the exception of the last (incomplete year): it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
+*   **Covid** equals **New Reg** in 2020.
+*   **Pre Covid** is the average number of registrations in the period 2016-2019.
+*   **Gap** is the difference between **Pre Covid** and **Covid**.
+*   **Adjusted Forecast** adds half of the **Gap** to the years 2022 and 2023.
+
+# `r page_titles[3]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+total <- for_plots%>%
+  filter(Drname=="British Columbia",
+         Group=="All groups")
+  plt <- ts_plot(total)+
+    labs(title="British Columbia / All trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[4]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+by_region <- for_plots%>%
+  filter(Group=="All groups",
+         Drname!="NULL",
+         Drname!="British Columbia")
+  plt <- ts_plot(by_region)+
+    facet_wrap(~fct_reorder(Drname, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="All trades groups by region")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[5]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+bc_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Drname=="British Columbia")
+  plt <- ts_plot(bc_by_group)+
+    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="British Columbia by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[6]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+lml_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Drname=="Lower Mainland Southwest")
+  plt <- ts_plot(lml_by_group)+
+    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="Lower Mainland Southwest by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[7]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+island_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Drname=="Vancouver Island and Coast")
+  plt <- ts_plot(island_by_group)+
+    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="Vancouver Island and Coast by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[8]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+south_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Drname=="Southeast")
+  plt <- ts_plot(south_by_group)+
+    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="Southeast by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[9]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
+north_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Drname=="North")
+  plt <- ts_plot(north_by_group)+
+    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    labs(title="North by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[10]` {data-navmenu="Table of Contents"}
+
+## Inputs {.sidebar}
+
+### Inputs:
+
+```{r}
+  filter_select(
+    id = "Drname",
+    label = "Choose a Region",
+    sharedData = shared_fcast,
+    group = ~`Drname`,
+    multiple = FALSE
+  )
+
+filter_select(
+    id = "Group",
+    label = "Choose a trades group",
+    sharedData = shared_fcast,
+    group = ~`Group`,
+    multiple = FALSE
+  )
+
+```
+
+```{js, echo=FALSE}
+<!-- Uncomment rest of code block if you want a default filtering (but then you cant download all the data) -->
+<!-- function filter_default(){ -->
+<!--   document.getElementById("Drname").getElementsByClassName("selectized")[0].selectize.setValue("British Columbia", false) -->
+<!--   document.getElementById("Group").getElementsByClassName("selectized")[0].selectize.setValue("All groups", false) -->
+<!-- } -->
+<!-- $(document).ready(filter_default); -->
+```
+
+## Column
+
+### Click &darr; to download data
+
+```{r}
+shared_fcast %>%
+  DT::datatable(
+    rownames = FALSE,
+    escape = FALSE,
+    extensions = c('Buttons', 'FixedColumns'),
+    class = 'cell-border stripe',
+    options = list(
+    pageLength = 100,
+    dom = 'Bfrtip',
+    scrollX = TRUE,
+    buttons = c('csv', 'excel')))
+```
