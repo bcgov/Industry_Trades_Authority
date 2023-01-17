@@ -18,6 +18,18 @@
 tictoc::tic()
 library(assertthat)
 library(here)
+
+# check to make sure directory structure exists------------------------------
+if (!dir.exists("data")) {dir.create("data")}
+if (!dir.exists(file.path("data","current_ita"))) {dir.create(file.path("data","current_ita"))}
+if (!dir.exists(file.path("data","old_ita"))) {dir.create(file.path("data","old_ita"))}
+if (!dir.exists(file.path("data","current_lmo"))) {dir.create(file.path("data","current_lmo"))}
+if (!dir.exists(file.path("data","old_lmo"))) {dir.create(file.path("data","old_lmo"))}
+if (!dir.exists("out")) {dir.create("out")}
+if (!dir.exists(file.path("out","current_output"))) {dir.create(file.path("out","current_output"))}
+if (!dir.exists(file.path("out","old_output"))) {dir.create(file.path("out","old_output"))}
+if (!dir.exists("temp")) {dir.create("temp")}
+
 #are the required files where they are supposed to be?----------------
 assert_that(length(list.files(here("data","current_ita"), pattern="Active"))==1,
             msg="The file Active_Apprenticeship_Registrations*.xlsx must be in folder data/current_ita")
