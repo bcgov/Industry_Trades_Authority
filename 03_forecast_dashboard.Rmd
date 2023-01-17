@@ -118,14 +118,14 @@ fcast_tbbl%>%
 ### Methodology
 
 *  For example, consider the data above (all trades groups, all regions).
-*  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**.  Note that there are values only for complete years: incomplete and future years are absent.
+*  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**. For the (potentially incomplete) last year of data, see column **Scaled Up**. 
 *   **Employment** is from the LMO forecast, upon which we build the demand-driven forecast of new apprenticeship registrations.
 *   **Prop Reg** gives the proportion of observed **New Reg** relative to **Employment**.
 *   **Prop Reg Utilized** is the average of **Prop Reg** for the years 2018 and 2019.
 *   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
-*   **Obs And Fcast** equals **New Reg** (for complete years) and **Demand Driven Fcast** otherwise.
-*   **Scaled Up** is the monthly average for the last (incomplete year) times 12.
-*   **Unadjusted Forecast** equals **Obs And Fcast**, with the exception of the last (incomplete year): it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
+*   **Obs And Fcast** equals **New Reg** when available and **Demand Driven Fcast** otherwise.
+*   **Scaled Up** is the monthly average for the last year, times 12.
+*   **Unadjusted Forecast** equals **Obs And Fcast**, with the exception of the last year: it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
 *   **Covid** equals **New Reg** in 2020.
 *   **Pre Covid** is the average number of registrations in the period 2016-2019.
 *   **Gap** is the difference between **Pre Covid** and **Covid**.

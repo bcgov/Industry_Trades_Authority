@@ -15,7 +15,7 @@
 #' PLACE THE 3 NEW ITA FILES IN current_ita.
 #' SOURCE THIS FILE.
 #' OUTPUT CAN BE FOUND IN out/current_output
-
+tictoc::tic()
 library(assertthat)
 library(here)
 #are the required files where they are supposed to be?----------------
@@ -42,6 +42,7 @@ rmarkdown::render("04_slide_deck.Rmd",
                   output_file =  str_replace_all(paste0("ita_slides_",lubridate::today(),".pdf")," ","_"),
                   output_dir = here::here("out","current_output"))
 
+tictoc::toc()
 #archive ita input files--------
 #filesstrings::file.move(here("data","current_ita", list.files(here("data", "current_ita"))), here("data", "old_ita"))
 

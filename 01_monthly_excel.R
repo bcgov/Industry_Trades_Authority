@@ -67,19 +67,19 @@ active_nested <- active %>%
   nest(data = everything())%>%
   mutate(
     construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Construction Trades"),
-    construction_trades__plot = map(construction_trades, make_plt, construction_trades, FALSE, "Active Apprenticeships"),
+    construction_trades__plot = map(construction_trades, make_plt, label=construction_trades, smooth=FALSE, title="Active Apprenticeships"),
     construction_trades__table = map(construction_trades, wider_with_totals),
     non_construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Non-Construction Trades"),
-    non_construction_trades__plot = map(non_construction_trades, make_plt, construction_trades, FALSE, "Active Apprenticeships"),
+    non_construction_trades__plot = map(non_construction_trades, make_plt, label=construction_trades, smooth=FALSE, title="Active Apprenticeships"),
     non_construction_trades__table = map(non_construction_trades, wider_with_totals),
     stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades"),
-    stc__plot = map(stc, make_plt, stc, FALSE, "Active Apprenticeships"),
+    stc__plot = map(stc, make_plt, label=stc, smooth=FALSE, title="Active Apprenticeships"),
     stc__table = map(stc, wider_with_totals),
     all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades"),
-    all_trades__plot = map(all_trades, make_plt, trades, FALSE, "Active Apprenticeships"),
+    all_trades__plot = map(all_trades, make_plt, label=trades, smooth=FALSE, title="Active Apprenticeships"),
     all_trades__table = map(all_trades, wider_with_totals),
     total = map(data, just_aggregate),
-    total__plot = map(total, make_plt, group, FALSE, "Active Apprenticeships"),
+    total__plot = map(total, make_plt, label=group, smooth=FALSE, title="Active Apprenticeships"),
     total__table = map(total, wider_with_totals)
   ) %>%
   select(contains("table") | contains("plot")) %>%
@@ -103,20 +103,20 @@ saveWorkbook(active_wb, here("out", "current_output", str_replace_all(paste0("ac
 cofq_nested <- cofq %>%
   nest(data = everything()) %>%
   mutate(
-    construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Construction Trades", program_type),
-    construction_trades__plot = map(construction_trades, make_plt, program_type, ttl="Certificates of Qualification"),
+    construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Construction Trades", grp = program_type),
+    construction_trades__plot = map(construction_trades, make_plt, label = program_type, title="Certificates of Qualification"),
     construction_trades__table = map(construction_trades, wider_with_totals),
-    non_construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Non-Construction Trades", program_type),
-    non_construction_trades__plot = map(non_construction_trades, make_plt, program_type, ttl="Certificates of Qualification"),
+    non_construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Non-Construction Trades", grp = program_type),
+    non_construction_trades__plot = map(non_construction_trades, make_plt, label = program_type, title="Certificates of Qualification"),
     non_construction_trades__table = map(non_construction_trades, wider_with_totals),
-    stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades", program_type),
-    stc__plot = map(stc, make_plt, program_type, ttl="Certificates of Qualification"),
+    stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades", grp = program_type),
+    stc__plot = map(stc, make_plt, label = program_type, title = "Certificates of Qualification"),
     stc__table = map(stc, wider_with_totals),
-    all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades", program_type),
-    all_trades__plot = map(all_trades, make_plt, program_type, ttl="Certificates of Qualification"),
+    all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades", grp = program_type),
+    all_trades__plot = map(all_trades, make_plt, label = program_type, title="Certificates of Qualification"),
     all_trades__table = map(all_trades, wider_with_totals),
-    total = map(data, just_aggregate, program_type),
-    total__plot = map(total, make_plt, program_type, ttl="Certificates of Qualification"),
+    total = map(data, just_aggregate, grp = program_type),
+    total__plot = map(total, make_plt, label = program_type, title="Certificates of Qualification"),
     total__table = map(total, wider_with_totals)
   ) %>%
   select(contains("table") | contains("plot")) %>%
@@ -142,15 +142,15 @@ new_reg_nested <- new_reg %>%
   mutate(
     construction_trades = map(data, filter_and_aggregate, construction_trades, "not equal", "Non-Trades"),
     construction_trades__table = map(construction_trades, wider_with_totals),
-    construction_trades__plot = map(construction_trades, make_plt, construction_trades, ttl="New Registrations"),
+    construction_trades__plot = map(construction_trades, make_plt, label = construction_trades, title = "New Registrations"),
     stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades"),
-    stc__plot = map(stc, make_plt, stc, ttl="New Registrations"),
+    stc__plot = map(stc, make_plt, label = stc, title = "New Registrations"),
     stc__table = map(stc, wider_with_totals),
     all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades"),
-    all_trades__plot = map(all_trades, make_plt, trades, ttl="New Registrations"),
+    all_trades__plot = map(all_trades, make_plt, label = trades, title="New Registrations"),
     all_trades__table = map(all_trades, wider_with_totals),
     total = map(data, just_aggregate),
-    total__plot = map(total, make_plt, group, ttl="New Registrations"),
+    total__plot = map(total, make_plt, label = group, title = "New Registrations"),
     total__table = map(total, wider_with_totals)
   ) %>%
   select(contains("table") | contains("plot")) %>%
