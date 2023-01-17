@@ -42,11 +42,11 @@ just_aggregate <- function(tbbl, grp = NULL) {
     na.omit()
 }
 
-make_plt <- function(tbbl, label = NULL, smooth = TRUE, ttl) {
+make_plt <- function(tbbl, label = NULL, smooth = TRUE, title=NULL) {
   gg <- tbbl %>%
     mutate(date = lubridate::ym(paste(year, str_sub(month, 1, 2), sep = "-"))) %>%
     ggplot(aes(date, count, colour = {{ label }})) +
-    labs(title = ttl,
+    labs(title = title,
         caption = "Source: Industry Trades Authority") +
     ggthemes::theme_excel_new() +
     scale_y_continuous(labels = scales::comma)
