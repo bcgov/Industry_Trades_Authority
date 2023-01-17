@@ -3,8 +3,22 @@ title: \textcolor{black}{Apprenticeship Registrations and Certifications}
 subtitle: \textcolor{black}{`r tsibble::yearquarter(lubridate::today()-30)`}
 author: "Labour Market Information Office"
 institute: "Contact: Richard.Martin@gov.bc.ca"
-date: "https://github.com/bcgov/Industry_Trades_Authority"
+date: "`r lubridate::today()`"
 header-includes: 
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
 - \definecolor{bcblue}{HTML}{1f4181}
 - \definecolor{bcyellow}{HTML}{ffba2a}
 - \setbeamercolor*{palette primary}{use=structure,fg=white,bg=bcblue}
@@ -18,47 +32,291 @@ output:
     fonttheme: "structurebold"
 classoption: "aspectratio=169"    
 ---
-## Slide with Table, Figure and Text
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(fpp3)
+library(here)
+library(janitor)
+library(readxl)
+library(cansim)
+library(kableExtra)
+library(ggfortify)
+library(grid)
+add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
+source(here("R","functions.R"))
+occ_char <- read_csv(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "LMO_occ_char"))) %>%
+  clean_names()%>%
+  rename(
+    noc_code = noc,
+    construction_trades = occ_group_construction_trades,
+    trades = occ_group_trades,
+    stc = occ_group_trades_mandatory_certification
+  )
+mapping <- occ_char %>%
+  select(
+    noc_code,
+    description,
+    construction_trades,
+    trades,
+    stc
+  )
+new_reg <- read_clean_join("New")
+
+by_year_and_age <- new_reg%>%
+  group_by(year, age_group_registration_start)%>%
+  summarize(count=sum(count, na.rm=TRUE))%>%
+  filter(!stringr::str_detect(age_group_registration_start,"="),
+         age_group_registration_start!="NULL")
+
+pop <- read_rds(here::here("data","current_lmo","pop.rds"))
+
+prop_reg <- full_join(by_year_and_age, pop, by=c("year"="year","age_group_registration_start"="age_group"))%>%
+  mutate(prop=count/value)
+
+new_reg_total <- new_reg%>%
+  just_aggregate()%>%
+  fix_dates()
+max_date <- yearmonth(max(new_reg_total$date))
+stc_new_reg <- new_reg%>%
+  filter_and_aggregate(stc, "equal", "First Ten MC Trades")%>%
+  fix_dates()
+cofq <- read_clean_join("CofQ")
+cofq_total <- cofq%>%
+  just_aggregate(program_type)%>%
+  fix_dates()
+cofq_app <- cofq_total%>%
+  filter(program_type=="Apprenticeship")
+cofq_chal <- cofq_total%>%
+  filter(program_type=="Challenge")
+
+bc_fcast <- read_rds(here("temp","for_plots.rds"))%>%
+  filter(drname=="British Columbia")%>%
+  wrapR::camel_to_title()
+rect_df <- tibble(xmin=year(ym(max_date)+months(1)), xmax=max(bc_fcast$year)) #for shaded rectangle denoting forecast
+
+adjusted <- bc_fcast%>%
+  filter(forecast=="Adjusted Forecast",
+         group=="All Groups")
+forecast_growth <- fcast_growth(adjusted, year(today()+months(add_months)), year(today()-months(12-add_months)))
+
+```
+
+## Highlights
+
+- Comparisons to same period last year:
+  - New apprenticeship registrations in `r max_date` were `r describe_change(get_growth(new_reg_total, years, 1))`.
+  - Registrations in the Skilled Trade Certification (STC) trades occupations in `r max_date` were `r describe_change(get_growth(stc_new_reg, years, 1))`.
+  - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_app, years, 1))` for Apprentices.
+  - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_chal, years, 1))` for Trade Qualifiers.
+
+- Forecast for next year:
+  - New apprenticeship registrations in `r year(today()+months(add_months))` are forecast to be `r describe_change(forecast_growth)`  than in `r year(today()-months(12-add_months))`.
+
+## New Apprentice Registrations: [Total*](#Total)
 ::: columns 
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Picture title} 
+### \textcolor{bcblue}{New Registrations are back to pre-pandemic levels} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-library(ggplot2)
-mt <- ggplot(mtcars, aes(mpg)) + geom_density(alpha=.2, fill="#FF6666") +
-theme(axis.title.x = element_text(size=10),axis.text.x  = element_text(size=8),
-axis.title.y = element_text(size=10),axis.text.y  = element_text(size=8))
-mt
+decomp_plot(new_reg_total)
 ```
 ::::
-:::: column
-- Here is some Bullet Text
-- And some more
-    - Subtext
-    - More Subtext
+::::  {.column width=.35}
+- Compared to the same month last year, New apprenticeship registrations were `r describe_change(get_growth(new_reg_total, years, 1))`.
+- Compared to last month, New apprenticeship registrations were `r describe_change(get_growth(new_reg_total, months, 1))`.
 ::::
 :::
-## Slide with Table, Figure and Text
+
+## New Apprentice Registrations: [Skilled Trade Certification*](#STC) 
 ::: columns 
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Picture title} 
+### \textcolor{bcblue}{STC new registrations growing rapidly} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-library(ggplot2)
-mt <- ggplot(mtcars, aes(mpg)) + geom_density(alpha=.2, fill="#FF6666") +
-theme(axis.title.x = element_text(size=10),axis.text.x  = element_text(size=8),
-axis.title.y = element_text(size=10),axis.text.y  = element_text(size=8))
-mt
+  decomp_plot(stc_new_reg)
 ```
 ::::
-:::: column
-- Here is some Bullet Text
-- And some more
-    - Subtext
-    - More Subtext
+::::  {.column width=.35}
+- Compared to the same month last year, STC new registrations were `r describe_change(get_growth(stc_new_reg, years, 1))`.
+- Compared to last month, STC new registrations were `r describe_change(get_growth(stc_new_reg, months, 1))`.
 ::::
 :::
+
+## Certificate of Qualification: [Apprenticeship route*](#A1)
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Levels remain depressed post COVID} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+decomp_plot(cofq_app)
+```
+::::
+::::  {.column width=.35}
+- Compared to the same month last year, Certificates of Qualification (apprentice route) were `r describe_change(get_growth(cofq_app, years, 1))`.
+- Compared to last month,  Certificates of Qualification (apprentice route) were `r describe_change(get_growth(cofq_app, months, 1))`.
+::::
+:::
+
+## Certificate of Qualification: [Challenge route*](#A1)
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{The challenge route is trending downwards} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+decomp_plot(cofq_chal)
+```
+::::
+::::  {.column width=.35}
+- Compared to the same month last year, Certificates of Qualification (challenge route) were `r describe_change(get_growth(cofq_chal, years, 1))`.
+- Compared to last month, Certificates of Qualification (challenge route) were `r describe_change(get_growth(cofq_chal, months, 1))`.
+::::
+:::
+
+## New Apprenticeship Registrations: [Total*](#Total)
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+  forecast_plot("All Groups")
+```
+::::
+::::  {.column width=.35}
+- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
+- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+::::
+:::
+
+
+## New Apprenticeship Registrations: [Skilled Trade Certification*](#STC)
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+  forecast_plot("Skilled Trades Certification (Stc)")
+```
+::::
+::::  {.column width=.35}
+- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
+- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+::::
+:::
+
+## New Apprenticeship Registrations: [Structural Building Trades*](#SBT)
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+  forecast_plot("Structural Building Trades")
+```
+::::
+::::  {.column width=.35}
+- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
+- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+::::
+:::
+
+
+## Population Comparison
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Ratio of New Registrations to Population} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+  ggplot(prop_reg, aes(age_group_registration_start, prop, fill=as.factor(year)))+
+  geom_col(position = "dodge")+
+  scale_fill_brewer(palette = "Dark2")+
+  labs(x="Age Group", y="",fill="", caption="Population data from Statistics Canada table 17-10-0005-01")+
+  scale_y_continuous(labels=scales::percent)
+```
+::::
+::::  {.column width=.35}
+- People under 30 are those most likely to register for an apprenticeship.
+- People of all ages were less likely to register for an apprenticeship in 2020. 
+- For most age groups the proportion of new registrations has partially recovered from COVID.
+- The exception is the 15 to 19 age group where the ratio is actually higher than pre-COVID. 
+::::
+:::
+
+## Appendix 1 {#A1}
+
+- New apprenticeship registration forecasts are developed using the ratio of previous registrations to trades employment, which is applied to the forecast of trades employment from the last published edition of the BC Labour Market Outlook (LMO). 
+- The current year forecast is a weighted average of new registrations thus far and the demand driven forecast described above.
+- Historical data on New Apprenticeship Registrations and Certificates of Qualification was provided by the Industry Training Authority (SkilledTradesBC).
+- Certificates of Qualification can be earned through two pathways: The completion of an apprenticeship program (Apprentice route, called “Apprentices”) or by challenging the certification exam (Challenge route, called “Trade Qualifiers”)
+
+## Appendix 2: STC trades {#STC}
+
+- These are the first 10 trades to undergo mandatory certification.
+
+```{r}
+stc <- mapping%>%
+  filter(stc=="First Ten MC Trades")%>%
+  select(noc_code, description)
+colnames(stc) <- wrapR::make_title(colnames(stc))
+kable(stc, booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+## Appendix 3: Functional Trade Groups: {#FTG}
+
+```{r}
+ftg <- new_reg%>%
+  select(functional_trades_group)%>%
+  distinct()%>%
+  na.omit()
+colnames(ftg) <- wrapR::make_title(colnames(ftg))
+kable(ftg, booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+## Appendix 4: Structural Building Trades: {#SBT}
+
+```{r}
+sbt <- new_reg%>%
+  filter(functional_trades_group=="Structural Building Trades")%>%
+  select(noc_code, description)%>%
+  distinct()%>%
+  na.omit()
+colnames(sbt) <- wrapR::make_title(colnames(sbt))
+kable(sbt, booktabs = T)%>%
+  kable_styling(latex_options = "striped", font_size = 7)
+```
+
+## Appendix 5: All trade occupations {#Total}
+
+```{r, message=FALSE}
+all_trades <- new_reg%>%
+  filter(trades=="Trades")%>%
+  select(noc_code,description)%>%
+  distinct()
+
+first <- head(all_trades, n=ceiling(nrow(all_trades)/2))
+second <- tail(all_trades, n=ceiling(nrow(all_trades)/2))
+all <- bind_cols(first, second)
+
+kable(all, 
+      booktabs = T,
+      col.names = c("NOC",
+                           "Description",
+                           "NOC",
+                           "Description"))%>%
+  kable_styling(latex_options = "striped", font_size = 5)
+```
+
+
 
 

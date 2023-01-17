@@ -40,7 +40,7 @@ ts_plot <- function(tbbl){
   plt 
 }
 
-fcast_tbbl <- read_csv(here("temp","fcast_tbbl.csv"))%>%
+fcast_tbbl <- read_rds(here("temp","fcast_tbbl.rds"))%>%
   arrange(drname,  group, year)%>%
   mutate(across(c(prop_reg, prop_reg_utilized), function(x) round(x, 3)),
          across(c(new_reg,
@@ -57,7 +57,7 @@ fcast_tbbl <- read_csv(here("temp","fcast_tbbl.csv"))%>%
 colnames(fcast_tbbl) <- wrapR::make_title(colnames(fcast_tbbl))
 shared_fcast <- SharedData$new(fcast_tbbl)
 
-for_plots <- read_csv(here("temp","for_plots.csv"))%>%
+for_plots <- read_rds(here("temp","for_plots.rds"))%>%
   mutate(forecast=str_to_title(str_replace_all(forecast, "_"," ")))
 colnames(for_plots) <- wrapR::make_title(colnames(for_plots))
 
@@ -129,7 +129,7 @@ fcast_tbbl%>%
 *   **Covid** equals **New Reg** in 2020.
 *   **Pre Covid** is the average number of registrations in the period 2016-2019.
 *   **Gap** is the difference between **Pre Covid** and **Covid**.
-*   **Adjusted Forecast** adds half of the **Gap** to the years 2022 and 2023.
+*   **Adjusted Forecast** adds half of the **Gap** to the forecast for 2023. (Prior to receiving data for December 2022, the other half of the gap was allocated to 2022.)
 
 # `r page_titles[3]` {data-navmenu="Table of Contents"}
 

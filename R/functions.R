@@ -90,3 +90,69 @@ addsheet <- function(sheetname, wb) {
 adjust_width <- function(sheet, wb) {
   setColWidths(wb = wb, sheet = sheet, cols = 1:8, widths = rep(14, 8))
 }
+get_growth <- function(tbbl, period, n){
+  latest <- tbbl%>%
+    filter(date==max(date))%>%
+    pull(count)
+  yago <- tbbl%>%
+    filter(date==max(date)-period(n))%>%
+    pull(count)
+  latest/yago-1
+}
+
+fcast_growth <- function(tbbl, plus, minus){
+  p <- tbbl%>%
+    filter(year==plus)%>%
+    pull(value)
+  m <- tbbl%>%
+    filter(year==minus)%>%
+    pull(value)
+  (p/m)^(1/(plus-minus))-1
+}
+
+describe_change <- function(num){
+  case_when(
+    num > .01 ~ paste0(abs_per(num)," higher"),
+    num < -.01 ~ paste0(abs_per(num)," lower"),
+    TRUE ~ "unchanged"
+  )
+}
+
+abs_per <- function(num){
+  scales::percent(abs(num), accuracy=1)
+}
+fix_dates <- function(tbbl){
+  tbbl%>%
+    ungroup()%>%
+    mutate(month=str_sub(month,1,2),
+           date=lubridate::ym(paste(year, month, sep="/")))%>%
+    arrange(date)
+}
+
+forecast_plot <- function(grp){
+  ggplot()+
+    geom_rect(data=rect_df, mapping=aes(xmin=xmin,xmax=xmax,ymin=-Inf,ymax=Inf), alpha=.1)+
+    geom_line(data=filter(bc_fcast, group==grp), mapping=aes(year, value, colour=forecast))+
+    scale_y_continuous(labels=scales::comma)+
+    labs(x="",y="",colour="")
+}
+
+decomp_plot <- function(tbbl){
+  p <- tbbl%>%
+    mutate(date=yearmonth(date))%>%
+    as_tsibble(index=date)%>%
+    model(stl = STL(count))%>%
+    components()%>%
+    autoplot()+
+    labs(title="",
+         subtitle="")
+  g <- ggplot_build(p)
+  g[["layout"]][["layout"]][[".var"]]  <-  c("Original Data", "Trend Component", "Seasonal Component", "Remainder")
+  grid.draw(ggplot_gtable(g))
+}
+
+
+
+
+
+

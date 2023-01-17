@@ -154,7 +154,7 @@ fcast_tbbl <- full_join(reg_shares, prop_reg_utilized)%>%
   full_join(gap)%>%
   mutate(adjusted_forecast=if_else(year == 2023, unadjusted_forecast+gap/2, unadjusted_forecast)) #gap was split over 2022:2023
 
-  write_csv(fcast_tbbl, here("temp","fcast_tbbl.csv"))
+  write_rds(fcast_tbbl, here("temp","fcast_tbbl.rds"))
 
 for_plots <- fcast_tbbl%>%
   select(year, drname, group, unadjusted_forecast, adjusted_forecast)%>%
@@ -162,25 +162,28 @@ for_plots <- fcast_tbbl%>%
   mutate(year=as.numeric(year))
 
 for_plots%>%
-  write_csv(here("temp","for_plots.csv"))
+  write_rds(here("temp","for_plots.rds"))
 
-##############################
-#
-#
-# my_plot <- function(tbbl, xvar, yvar, facetvar){
-#   ylimits <- tbbl%>%
-#     group_by("{facetvar}":=get(facetvar))%>%
-#     summarize(ymin=min({{  yvar  }}),
-#               ymax=max({{  yvar  }}))
-#   ggplot()+
-#     geom_rect(data = ylimits,
-#               mapping=aes(xmin = 10, xmax = 20, ymin = ymin, ymax = ymax),
-#               fill = "grey", alpha = 0.2) +
-#     geom_line(data=tbbl, mapping=aes({{  xvar  }}, {{  yvar  }}))+
-#     geom_point(data=tbbl, mapping=aes({{  xvar  }}, {{  yvar  }}))+
-#     facet_wrap(~get(facetvar), scales = "free_y")+
-#     theme_minimal()
-# }
-#
-# plt <- my_plot(df, speed, time, "species")
-# ggplotly(plt)
+#for slide deck-------------------
+
+pop <- cansim::get_cansim("17-10-0005-01")%>%
+  janitor::clean_names()%>%
+  filter(geo=="British Columbia",
+         date>lubridate::ym("2016-Jan"),
+         age_group %in% c("15 to 19 years",
+                          "20 to 24 years",
+                          "25 to 29 years",
+                          "30 to 34 years",
+                          "35 to 39 years",
+                          "40 to 44 years",
+                          "45 to 49 years",
+                          "50 to 54 years",
+                          "55 to 59 years"),
+         sex=="Both sexes"
+  )%>%
+  mutate(year=lubridate::year(date),
+         age_group=str_sub(age_group, end=-7)
+  )%>%
+  select(value, year, age_group)
+write_rds(pop, here::here("data","current_lmo","pop.rds"))
+

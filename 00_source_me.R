@@ -11,7 +11,7 @@
 # See the License for the specific language governing permissions and limitations under the License.
 
 #' TO DO:
-#' MAKE SURE THE FILE ****_LMO_occ_char.csv is up to date (change once per year after LMO release)
+#' MAKE SURE THE FILES LMO_occ_char.csv AND lmo_employment ARE UP TO DATE (CHANGE ONCE PER YEAR AFTER LMO RELEASE)
 #' PLACE THE 3 NEW ITA FILES IN current_ita.
 #' SOURCE THIS FILE.
 #' OUTPUT CAN BE FOUND IN out/current_output
@@ -36,10 +36,10 @@ filesstrings::file.move(here("out","current_output", list.files(here("out", "cur
 source("01_monthly_excel.R")
 source("02_make_forecasts.R")
 rmarkdown::render("03_forecast_dashboard.Rmd",
-                  output_file =  str_replace_all(paste0("ita_forecasts_",date(),".html")," ","_"),
+                  output_file =  str_replace_all(paste0("ita_forecasts_",lubridate::today(),".html")," ","_"),
                   output_dir = here::here("out","current_output"))
 rmarkdown::render("04_slide_deck.Rmd",
-                  output_file =  str_replace_all(paste0("ita_slides_",date(),".pdf")," ","_"),
+                  output_file =  str_replace_all(paste0("ita_slides_",lubridate::today(),".pdf")," ","_"),
                   output_dir = here::here("out","current_output"))
 
 #archive ita input files--------

@@ -19,7 +19,6 @@ library(janitor)
 library(assertthat)
 # functions------------
 source(here("R", "functions.R"))
-
 # read in the data----------------
 occ_char <- read_csv(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "LMO_occ_char"))) %>%
   clean_names()%>%
@@ -29,7 +28,6 @@ occ_char <- read_csv(here("data", "current_lmo", list.files(here("data", "curren
     trades = occ_group_trades,
     stc = occ_group_trades_mandatory_certification
   )
-
 noc_list <- occ_char %>%
   select(
     noc = noc_code,
@@ -61,13 +59,10 @@ mapping <- occ_char %>%
     trades,
     stc
   )
-
 active <- read_clean_join("Active")
 cofq <- read_clean_join("CofQ")
 new_reg <- read_clean_join("New")
-
 # active--------------
-
 active_nested <- active %>%
   nest(data = everything())%>%
   mutate(
@@ -91,8 +86,8 @@ active_nested <- active %>%
   pivot_longer(cols = everything(), names_to = "name", values_to = "value") %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
-
-# save active to excel-------------
+# save active----------------
+write_rds(active_nested, here::here("temp", "active_nested.rds"))
 active_wb <- createWorkbook()
 active_nested %>%
   mutate(
@@ -101,13 +96,10 @@ active_nested %>%
     walk2(category, table, writeDataTable, wb = active_wb),
     walk2(plot, category, add_plot, wb = active_wb)
   )
-
 noc_list %>%
   mutate(walk2(name, value, writeDataTable, wb = active_wb, startRow = 19))
-saveWorkbook(active_wb, here("out", "current_output", str_replace_all(paste0("active_",date(),".xlsx")," ","_")), overwrite = TRUE)
-
+saveWorkbook(active_wb, here("out", "current_output", str_replace_all(paste0("active_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 # cofq--------------------
-
 cofq_nested <- cofq %>%
   nest(data = everything()) %>%
   mutate(
@@ -131,8 +123,8 @@ cofq_nested <- cofq %>%
   pivot_longer(cols = everything(), names_to = "name", values_to = "value") %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
-
-# save cofq to excel-----------------------
+# save cofq------------------------
+write_rds(cofq_nested, here::here("temp", "cofq_nested.rds"))
 cofq_wb <- createWorkbook()
 cofq_nested %>%
   mutate(
@@ -141,12 +133,10 @@ cofq_nested %>%
     walk2(category, table, writeDataTable, wb = cofq_wb),
     walk2(plot, category, add_plot, wb = cofq_wb)
   )
-
 noc_list %>%
   mutate(walk2(name, value, writeDataTable, wb = cofq_wb, startRow = 19))
-saveWorkbook(cofq_wb, here("out", "current_output", str_replace_all(paste0("cofq_",date(),".xlsx")," ","_")), overwrite = TRUE)
+saveWorkbook(cofq_wb, here("out", "current_output", str_replace_all(paste0("cofq_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 # new reg--------------
-
 new_reg_nested <- new_reg %>%
   nest(data = everything()) %>%
   mutate(
@@ -167,8 +157,8 @@ new_reg_nested <- new_reg %>%
   pivot_longer(cols = everything(), names_to = "name", values_to = "value") %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
-
-# save new_reg to excel-----------------------
+# save new_reg------------------
+write_rds(new_reg_nested, here::here("temp", "new_reg_nested.rds"))
 new_reg_wb <- createWorkbook()
 new_reg_nested %>%
   mutate(
@@ -177,7 +167,6 @@ new_reg_nested %>%
     walk2(category, table, writeDataTable, wb = new_reg_wb),
     walk2(plot, category, add_plot, wb = new_reg_wb)
   )
-
 noc_list %>%
   filter(name != "non_construction_trades") %>%
   mutate(walk2(name, value, writeDataTable, wb = new_reg_wb, startRow = 19))
@@ -185,5 +174,5 @@ non_construction_df <- noc_list %>%
   filter(name == "non_construction_trades") %>%
   pull(value)
 writeDataTable(wb = new_reg_wb, sheet = "construction_trades", x = non_construction_df[[1]], startRow = 60)
-saveWorkbook(new_reg_wb, here("out", "current_output", str_replace_all(paste0("new_reg_",date(),".xlsx")," ","_")), overwrite = TRUE)
+saveWorkbook(new_reg_wb, here("out", "current_output", str_replace_all(paste0("new_reg_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 
