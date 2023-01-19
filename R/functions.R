@@ -103,10 +103,10 @@ get_growth <- function(tbbl, period, n){
 fcast_growth <- function(tbbl, plus, minus){
   p <- tbbl%>%
     filter(year==plus)%>%
-    pull(value)
+    pull(forecast)
   m <- tbbl%>%
     filter(year==minus)%>%
-    pull(value)
+    pull(forecast)
   (p/m)^(1/(plus-minus))-1
 }
 
@@ -129,26 +129,32 @@ fix_dates <- function(tbbl){
     arrange(date)
 }
 
-forecast_plot <- function(grp){
-  ggplot()+
+forecast_plot <- function(tbbl, grp){
+   ggplot()+
     geom_rect(data=rect_df, mapping=aes(xmin=xmin,xmax=xmax,ymin=-Inf,ymax=Inf), alpha=.1)+
-    geom_line(data=filter(bc_fcast, group==grp), mapping=aes(year, value, colour=forecast))+
+    geom_line(data=filter(tbbl, group==grp), mapping=aes(year, forecast, group=1))+
     scale_y_continuous(labels=scales::comma)+
-    labs(x="",y="",colour="")
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 16))+
+    labs(x="",y="",colour="")+
+    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
 }
 
 decomp_plot <- function(tbbl){
-  p <- tbbl%>%
+  components <- tbbl%>%
     mutate(date=yearmonth(date))%>%
     as_tsibble(index=date)%>%
     model(stl = STL(count))%>%
     components()%>%
-    autoplot()+
-    labs(title="",
-         subtitle="")
-  g <- ggplot_build(p)
-  g[["layout"]][["layout"]][[".var"]]  <-  c("Original Data", "Trend Component", "Seasonal Component", "Remainder")
-  grid.draw(ggplot_gtable(g))
+    select(date, count, trend)%>%
+    pivot_longer(cols=-date)%>%
+    mutate(date=lubridate::ym(date))
+  x_breaks <- as_date(seq(floor_date(min(components$date),"year"), ceiling_date(max(components$date),"year"), by="6 months"))
+  ggplot(components, aes(date, value, alpha=name))+
+    geom_line(show.legend = FALSE)+
+    scale_y_continuous(labels=scales::comma)+
+    scale_x_date(breaks=x_breaks, date_labels = "%b %Y")+
+    labs(x="",y="")+
+    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
 }
 
 
