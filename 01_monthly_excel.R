@@ -62,6 +62,14 @@ mapping <- occ_char %>%
 active <- read_clean_join("Active")
 cofq <- read_clean_join("CofQ")
 new_reg <- read_clean_join("New")
+
+new_reg%>%
+  mutate(date=lubridate::ym(paste(year,str_sub(month,1,2),sep = "-")))%>%
+  summarize(max(date, na.rm=TRUE))%>%
+  pull()%>%
+  write_rds(here::here("temp","max_date.rds"))
+
+
 # active--------------
 active_nested <- active %>%
   nest(data = everything())%>%

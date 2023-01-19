@@ -95,21 +95,6 @@ stc_bc <- new_reg%>%
 
 ftg_and_stc <- bind_rows(ftg, ftg_group, ftg_bc, ftg_everything, stc, stc_bc)
 
-#covid registration gap-----------------
-
-covid <- ftg_and_stc%>%
-  filter(year==2020)%>%
-  ungroup()%>%
-  select(drname, group, covid=new_reg)
-
-pre_covid <- ftg_and_stc%>%
-  filter(year %in% 2016:2019)%>%
-  group_by(drname, group)%>%
-  summarize(pre_covid=mean(new_reg, na.rm=TRUE))
-
-gap <- full_join(covid, pre_covid)%>%
-  mutate(gap=pre_covid-covid)
-
 full_years <- ftg_and_stc%>%
   filter(year<max_year)%>%
   mutate(year=as.character(year)) #necessary for join below
@@ -150,15 +135,12 @@ fcast_tbbl <- full_join(reg_shares, prop_reg_utilized)%>%
          obs_and_fcast=if_else(is.na(new_reg), demand_driven_fcast, new_reg))%>%
   filter(!is.na(obs_and_fcast))%>%
   full_join(partial_scaled_up)%>%
-  mutate(unadjusted_forecast=if_else(is.na(scaled_up), obs_and_fcast, f_weight*scaled_up +(1-f_weight)*obs_and_fcast))%>%
-  full_join(gap)%>%
-  mutate(adjusted_forecast=if_else(year == 2023, unadjusted_forecast+gap/2, unadjusted_forecast)) #gap was split over 2022:2023
+  mutate(forecast=if_else(is.na(scaled_up), obs_and_fcast, f_weight*scaled_up +(1-f_weight)*obs_and_fcast))
 
   write_rds(fcast_tbbl, here("temp","fcast_tbbl.rds"))
 
 for_plots <- fcast_tbbl%>%
-  select(year, drname, group, unadjusted_forecast, adjusted_forecast)%>%
-  pivot_longer(cols=c(unadjusted_forecast, adjusted_forecast), names_to = "forecast")%>%
+  select(year, drname, group, forecast)%>%
   mutate(year=as.numeric(year))
 
 for_plots%>%

@@ -18,25 +18,25 @@ library(DT)
 library(plotly)
 library(here)
 #functions--------------
+
 ts_plot <- function(tbbl){
-  plt <- ggplot(tbbl, aes(Year, 
-                                Value, 
-                                group=Forecast, 
-                                colour=Forecast,
-                                text=paste0(Drname,
-                                            "/",
-                                            Group,
-                                            "/",
-                                            Year,
-                                            ":\n ",
-                                            Forecast,
-                                            " = ",
-                                            scales::comma(Value,accuracy = 1))))+
+  plt <- ggplot(tbbl, 
+                aes(Year, 
+                    Forecast,
+                    group=1,
+                    text=paste0(Drname,
+                    "\n",
+                    Group,
+                    "\n",
+                    Year,
+                    "\nForecast = ",
+                    scales::comma(Forecast, accuracy = 1))))+
   geom_line()+
   scale_y_continuous(labels=scales::comma)+
   theme_minimal()+
   labs(x="",
-       y="New Registrations")
+       y="New Registrations")+
+    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
   plt 
 }
 
@@ -48,17 +48,12 @@ fcast_tbbl <- read_rds(here("temp","fcast_tbbl.rds"))%>%
             demand_driven_fcast,
             obs_and_fcast,
             scaled_up,
-            unadjusted_forecast,
-            covid,
-            pre_covid,
-            gap,
-            adjusted_forecast),  function(x) scales::comma(x, accuracy=1))
+            forecast),  function(x) scales::comma(x, accuracy=1))
          )
 colnames(fcast_tbbl) <- wrapR::make_title(colnames(fcast_tbbl))
 shared_fcast <- SharedData$new(fcast_tbbl)
 
-for_plots <- read_rds(here("temp","for_plots.rds"))%>%
-  mutate(forecast=str_to_title(str_replace_all(forecast, "_"," ")))
+for_plots <- read_rds(here("temp","for_plots.rds"))
 colnames(for_plots) <- wrapR::make_title(colnames(for_plots))
 
 page_titles <- c("Title Page",#replace with your page titles
@@ -125,11 +120,7 @@ fcast_tbbl%>%
 *   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
 *   **Obs And Fcast** equals **New Reg** when available and **Demand Driven Fcast** otherwise.
 *   **Scaled Up** is the monthly average for the last year, times 12.
-*   **Unadjusted Forecast** equals **Obs And Fcast**, with the exception of the last year: it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
-*   **Covid** equals **New Reg** in 2020.
-*   **Pre Covid** is the average number of registrations in the period 2016-2019.
-*   **Gap** is the difference between **Pre Covid** and **Covid**.
-*   **Adjusted Forecast** adds half of the **Gap** to the forecast for 2023. (Prior to receiving data for December 2022, the other half of the gap was allocated to 2022.)
+*   **Forecast** equals **Obs And Fcast**, with the exception of the last year: it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
 
 # `r page_titles[3]` {data-navmenu="Table of Contents"}
 
@@ -158,7 +149,7 @@ by_region <- for_plots%>%
          Drname!="NULL",
          Drname!="British Columbia")
   plt <- ts_plot(by_region)+
-    facet_wrap(~fct_reorder(Drname, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Drname, Forecast, .desc = TRUE), scales = "free_y")+
     labs(title="All trades groups by region")
   ggplotly(plt, tooltip = "text")
 ```
@@ -172,9 +163,10 @@ by_region <- for_plots%>%
 ```{r}
 bc_by_group <- for_plots%>%
   filter(Group!="All groups",
+         Group!="Marine and Boat Trades",
          Drname=="British Columbia")
   plt <- ts_plot(bc_by_group)+
-    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free")+
     labs(title="British Columbia by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
@@ -187,10 +179,11 @@ bc_by_group <- for_plots%>%
 
 ```{r}
 lml_by_group <- for_plots%>%
-  filter(Group!="All groups",
+  filter(Group!="All groups",,
+         Group!="Marine and Boat Trades",
          Drname=="Lower Mainland Southwest")
   plt <- ts_plot(lml_by_group)+
-    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
     labs(title="Lower Mainland Southwest by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
@@ -203,10 +196,11 @@ lml_by_group <- for_plots%>%
 
 ```{r}
 island_by_group <- for_plots%>%
-  filter(Group!="All groups",
+  filter(Group!="All groups",,
+         Group!="Marine and Boat Trades",
          Drname=="Vancouver Island and Coast")
   plt <- ts_plot(island_by_group)+
-    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
     labs(title="Vancouver Island and Coast by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
@@ -219,10 +213,11 @@ island_by_group <- for_plots%>%
 
 ```{r}
 south_by_group <- for_plots%>%
-  filter(Group!="All groups",
+  filter(Group!="All groups",,
+         Group!="Marine and Boat Trades",
          Drname=="Southeast")
   plt <- ts_plot(south_by_group)+
-    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
     labs(title="Southeast by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
@@ -235,10 +230,11 @@ south_by_group <- for_plots%>%
 
 ```{r}
 north_by_group <- for_plots%>%
-  filter(Group!="All groups",
+  filter(Group!="All groups",,
+         Group!="Marine and Boat Trades",
          Drname=="North")
   plt <- ts_plot(north_by_group)+
-    facet_wrap(~fct_reorder(Group, Value, .desc = TRUE), scales = "free_y")+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
     labs(title="North by trades groups")
   ggplotly(plt, tooltip = "text")
 ```

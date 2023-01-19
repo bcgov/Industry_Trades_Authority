@@ -1,22 +1,12 @@
 ---
-title: \textcolor{black}{Apprenticeship Registrations and Certifications}
-subtitle: \textcolor{black}{`r tsibble::yearquarter(lubridate::today()-30)`}
+title: \textcolor{black}{New Apprenticeship Registrations and Apprenticeship Certifications for}
+subtitle: \textcolor{black}{`r format(readRDS(here::here("temp","max_date.rds")), format="%B %Y")`}
 author: "Labour Market Information Office"
 institute: "Contact: Richard.Martin@gov.bc.ca"
 date: "`r lubridate::today()`"
 header-includes: 
 - \usepackage{booktabs}
-- \usepackage{longtable}
-- \usepackage{array}
-- \usepackage{multirow}
-- \usepackage{wrapfig}
-- \usepackage{float}
 - \usepackage{colortbl}
-- \usepackage{pdflscape}
-- \usepackage{tabu}
-- \usepackage{threeparttable}
-- \usepackage{threeparttablex}
-- \usepackage[normalem]{ulem}
 - \usepackage{makecell}
 - \usepackage{xcolor}
 - \definecolor{bcblue}{HTML}{1f4181}
@@ -33,9 +23,8 @@ output:
 classoption: "aspectratio=169"    
 ---
 
-
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE)
 library(tidyverse)
 library(fpp3)
 library(here)
@@ -97,16 +86,15 @@ bc_fcast <- read_rds(here("temp","for_plots.rds"))%>%
   wrapR::camel_to_title()
 rect_df <- tibble(xmin=year(ym(max_date)+months(1)), xmax=max(bc_fcast$year)) #for shaded rectangle denoting forecast
 
-adjusted <- bc_fcast%>%
-  filter(forecast=="Adjusted Forecast",
-         group=="All Groups")
-forecast_growth <- fcast_growth(adjusted, year(today()+months(add_months)), year(today()-months(12-add_months)))
+forecast_growth <- bc_fcast%>%
+  filter(group=="All Groups")%>%
+  fcast_growth(year(today()+months(add_months)), year(today()-months(12-add_months)))
 
 ```
 
 ## Highlights
 
-- Comparisons to same period last year:
+- Comparisons to same month last year:
   - New apprenticeship registrations in `r max_date` were `r describe_change(get_growth(new_reg_total, years, 1))`.
   - Registrations in the Skilled Trade Certification (STC) trades occupations in `r max_date` were `r describe_change(get_growth(stc_new_reg, years, 1))`.
   - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_app, years, 1))` for Apprentices.
@@ -144,6 +132,25 @@ decomp_plot(new_reg_total)
 ::::  {.column width=.35}
 - Compared to the same month last year, STC new registrations were `r describe_change(get_growth(stc_new_reg, years, 1))`.
 - Compared to last month, STC new registrations were `r describe_change(get_growth(stc_new_reg, months, 1))`.
+::::
+:::
+
+## Certificate of Qualification: Total
+::: columns 
+:::: {.column width=.05}
+::::
+:::: {.column width=.6}
+### \textcolor{bcblue}{Levels remain depressed post COVID} 
+```{r, echo=FALSE, fig.show='hold', fig.height=6}
+cofq_agg <- cofq_total%>%
+  group_by(date)%>%
+  summarize(count=sum(count))
+decomp_plot(cofq_agg)
+```
+::::
+::::  {.column width=.35}
+- Compared to the same month last year, Certificates of Qualification were `r describe_change(get_growth(cofq_agg, years, 1))`.
+- Compared to last month,  Certificates of Qualification were `r describe_change(get_growth(cofq_agg, months, 1))`.
 ::::
 :::
 
@@ -186,12 +193,29 @@ decomp_plot(cofq_chal)
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot("All Groups")
+  forecast_plot(bc_fcast, "All Groups")
+
+get_fcast <- function(grp, yr){
+  bc_fcast%>%
+    filter(year==yr, 
+           group==grp)%>%
+    pull(forecast)
+}
+
+get_cagr <- function(grp){
+  current_year <- year(today())
+  future_year <- max(bc_fcast$year)
+  current_forecast <- get_fcast(grp, current_year)
+  future_forecast <- get_fcast(grp, future_year)
+  scales::percent((future_forecast/current_forecast)^(1/(future_year-current_year))-1, accuracy = .1)  
+}
+
 ```
 ::::
 ::::  {.column width=.35}
-- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
-- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+- Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
+- In `r year(today())` new registrations are forecast to be `r get_fcast("All Groups", year(today()))%>%scales::comma()`.
+- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("All Groups")`
 ::::
 :::
 
@@ -203,12 +227,13 @@ decomp_plot(cofq_chal)
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot("Skilled Trades Certification (Stc)")
+  forecast_plot(bc_fcast, "Skilled Trades Certification (Stc)")
 ```
 ::::
 ::::  {.column width=.35}
-- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
-- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+- Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
+- In `r year(today())` new registrations are forecast to be `r get_fcast("Skilled Trades Certification (Stc)", year(today()))%>%scales::comma()`.
+- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Skilled Trades Certification (Stc)")`
 ::::
 :::
 
@@ -219,12 +244,13 @@ decomp_plot(cofq_chal)
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot("Structural Building Trades")
+  forecast_plot(bc_fcast, "Structural Building Trades")
 ```
 ::::
 ::::  {.column width=.35}
-- The unadjusted forecast is demand driven: new registrations are assumed to be a (stable) proportion of the Labour Market Outlook employment.
-- The adjusted forecast assumes that there is pent up demand from COVID: Half of the difference between pre-pandemic and 2020 is added to the unadjusted forecast for 2023.
+- Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
+- In `r year(today())` new registrations are forecast to be `r get_fcast("Structural Building Trades", year(today()))%>%scales::comma()`.
+- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Structural Building Trades")`
 ::::
 :::
 
