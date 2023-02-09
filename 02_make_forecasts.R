@@ -18,12 +18,12 @@ library(here)
 library(janitor)
 
 # read in the data----------------
-mapping <- read_csv(here("data","mapping", "functional_groups.csv"))
+mapping <- read_csv(here("current_data","mapping", "functional_groups.csv"))
 
-new_reg <- read_xlsx(here("data",
-                          "current_ita",
-                          list.files(here("data",
-                                          "current_ita"),
+new_reg <- read_xlsx(here("current_data",
+                          "ita",
+                          list.files(here("current_data",
+                                          "ita"),
                                      pattern = "New_Apprenticeship_Registrations"))) %>%
   clean_names() %>%
   mutate(noc_code = as.character(noc_code)) %>%
@@ -44,7 +44,7 @@ ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
 f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd registrations.
 max_year <- max(new_reg$year)
 
-lmo <- vroom::vroom(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "employment")), skip = 2)%>%
+lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 2)%>%
   pivot_longer(cols=-c(NOC,Description, Industry, Variable,`Geographic Area`), names_to="year", values_to = "count")%>%
   clean_names()%>%
   full_join(mapping, by="noc", multiple = "all")%>%
@@ -164,5 +164,5 @@ pop <- cansim::get_cansim("17-10-0005-01")%>%
          age_group=str_sub(age_group, end=-7)
   )%>%
   select(value, year, age_group)
-write_rds(pop, here::here("data","current_lmo","pop.rds"))
+write_rds(pop, here::here("current_data","lmo","pop.rds"))
 

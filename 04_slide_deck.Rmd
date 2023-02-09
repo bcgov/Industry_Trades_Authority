@@ -36,7 +36,7 @@ library(ggfortify)
 library(grid)
 add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
-mapping <- read_csv(here("data","mapping","mapping.csv"))
+mapping <- read_csv(here("current_data","mapping","mapping.csv"))
 new_reg <- read_clean_join("New")
 
 by_year_and_age <- new_reg%>%
@@ -45,7 +45,7 @@ by_year_and_age <- new_reg%>%
   filter(!stringr::str_detect(age_group_registration_start,"="),
          age_group_registration_start!="NULL")
 
-pop <- read_rds(here::here("data","current_lmo","pop.rds"))
+pop <- read_rds(here::here("current_data","lmo","pop.rds"))
 
 prop_reg <- full_join(by_year_and_age, pop, by=c("year"="year","age_group_registration_start"="age_group"))%>%
   mutate(prop=count/value)

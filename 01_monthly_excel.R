@@ -26,7 +26,7 @@ library(assertthat)
 source(here("R", "functions.R"))
 # read in the data----------------
 
-occ_char <- read_excel(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "Occupational Characteristics")), skip = 3) %>%
+occ_char <- read_excel(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "Occupational Characteristics")), skip = 3) %>%
   clean_names()%>%
   mutate(noc_code=str_sub(noc_2016, start=2), .after=noc_2016)%>%
   rename(
@@ -69,7 +69,7 @@ mapping <- occ_char %>%
     trades,
     stc
   )
-write_csv(mapping, here("data","mapping","mapping.csv"))
+write_csv(mapping, here("current_data","mapping","mapping.csv"))
 
 
 active <- read_clean_join("Active")

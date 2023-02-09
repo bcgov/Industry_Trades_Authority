@@ -1,5 +1,5 @@
 read_clean_join <- function(pat) {
-  read_xlsx(here("data", "current_ita", list.files(here("data", "current_ita"), pattern = pat))) %>%
+  read_xlsx(here("current_data", "ita", list.files(here("current_data", "ita"), pattern = pat))) %>%
     clean_names() %>%
     mutate(noc_code = as.character(noc_code)) %>%
     full_join(mapping, by = "noc_code") %>%

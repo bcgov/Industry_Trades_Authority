@@ -20,25 +20,26 @@ library(assertthat)
 library(here)
 
 # check to make sure directory structure exists------------------------------
-if (!dir.exists("data")) {dir.create("data")}
-if (!dir.exists(file.path("data","current_ita"))) {dir.create(file.path("data","current_ita"))}
-if (!dir.exists(file.path("data","old_ita"))) {dir.create(file.path("data","old_ita"))}
-if (!dir.exists(file.path("data","current_lmo"))) {dir.create(file.path("data","current_lmo"))}
-if (!dir.exists(file.path("data","old_lmo"))) {dir.create(file.path("data","old_lmo"))}
+if (!dir.exists("current_data")) {dir.create("current_data")}
+if (!dir.exists(file.path("current_data","ita"))) {dir.create(file.path("current_data","ita"))}
+if (!dir.exists(file.path("current_data","lmo"))) {dir.create(file.path("current_data","lmo"))}
+if (!dir.exists("old_data")) {dir.create("old_data")}
+if (!dir.exists(file.path("old_data","ita"))) {dir.create(file.path("old_data","ita"))}
+if (!dir.exists(file.path("old_data","lmo"))) {dir.create(file.path("old_data","lmo"))}
 if (!dir.exists("out")) {dir.create("out")}
 if (!dir.exists(file.path("out","current_output"))) {dir.create(file.path("out","current_output"))}
 if (!dir.exists(file.path("out","old_output"))) {dir.create(file.path("out","old_output"))}
 if (!dir.exists("temp")) {dir.create("temp")}
 
 #are the required files where they are supposed to be?----------------
-assert_that(length(list.files(here("data","current_ita"), pattern="Active"))==1,
-            msg="The file Active_Apprenticeship_Registrations*.xlsx must be in folder data/current_ita")
-assert_that(length(list.files(here("data","current_ita"), pattern="CofQ"))==1,
-            msg="The file CofQ_Apprenticeship_Challenge*.xlsx must be in folder data/current_ita")
-assert_that(length(list.files(here("data","current_ita"), pattern="New"))==1,
-            msg="The file New_Apprenticeship_Registrations*.xlsx must be in folder data/current_ita")
-assert_that(length(list.files(here("data","current_lmo"), pattern="Occupational Characteristics"))==1,
-            msg="The file Occupational Characteristics*.xlsx must be in folder data/current_lmo")
+assert_that(length(list.files(here("current_data","ita"), pattern="Active"))==1,
+            msg="The file Active_Apprenticeship_Registrations*.xlsx must be in folder current_data/ita")
+assert_that(length(list.files(here("current_data","ita"), pattern="CofQ"))==1,
+            msg="The file CofQ_Apprenticeship_Challenge*.xlsx must be in folder current_data/ita")
+assert_that(length(list.files(here("current_data","ita"), pattern="New"))==1,
+            msg="The file New_Apprenticeship_Registrations*.xlsx must be in folder current_data/ita")
+assert_that(length(list.files(here("current_data","lmo"), pattern="Occupational Characteristics"))==1,
+            msg="The file Occupational Characteristics*.xlsx must be in folder current_data/lmo")
 
 #archive old output
 filesstrings::file.move(here("out","current_output", list.files(here("out", "current_output"))),
@@ -56,7 +57,7 @@ rmarkdown::render("04_slide_deck.Rmd",
 
 tictoc::toc()
 #archive ita input files--------
-filesstrings::file.move(here("data","current_ita", list.files(here("data", "current_ita"))), here("data", "old_ita"))
+#filesstrings::file.move(here("current_data","ita", list.files(here("current_data", "ita"))), here("old_data", "ita"))
 
 
 
