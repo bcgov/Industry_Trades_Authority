@@ -1,6 +1,6 @@
 ---
-title: \textcolor{black}{New Apprenticeship Registrations and Apprenticeship Certifications for}
-subtitle: \textcolor{black}{`r format(readRDS(here::here("temp","max_date.rds")), format="%B %Y")`}
+title: \textcolor{black}{New Apprenticeship Registrations and Apprenticeship Certifications}
+subtitle: \textcolor{black}{`r paste("for",format(readRDS(here::here("temp","max_date.rds")), format="%B %Y"))`}
 author: "Labour Market Information Office"
 institute: "Contact: Richard.Martin@gov.bc.ca"
 date: "`r lubridate::today()`"
@@ -36,22 +36,7 @@ library(ggfortify)
 library(grid)
 add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
-occ_char <- read_csv(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "LMO_occ_char"))) %>%
-  clean_names()%>%
-  rename(
-    noc_code = noc,
-    construction_trades = occ_group_construction_trades,
-    trades = occ_group_trades,
-    stc = occ_group_trades_mandatory_certification
-  )
-mapping <- occ_char %>%
-  select(
-    noc_code,
-    description,
-    construction_trades,
-    trades,
-    stc
-  )
+mapping <- read_csv(here("data","mapping","mapping.csv"))
 new_reg <- read_clean_join("New")
 
 by_year_and_age <- new_reg%>%

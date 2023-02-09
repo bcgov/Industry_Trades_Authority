@@ -179,7 +179,7 @@ bc_by_group <- for_plots%>%
 
 ```{r}
 lml_by_group <- for_plots%>%
-  filter(Group!="All groups",,
+  filter(Group!="All groups",
          Group!="Marine and Boat Trades",
          Drname=="Lower Mainland Southwest")
   plt <- ts_plot(lml_by_group)+
@@ -196,7 +196,7 @@ lml_by_group <- for_plots%>%
 
 ```{r}
 island_by_group <- for_plots%>%
-  filter(Group!="All groups",,
+  filter(Group!="All groups",
          Group!="Marine and Boat Trades",
          Drname=="Vancouver Island and Coast")
   plt <- ts_plot(island_by_group)+
@@ -213,7 +213,7 @@ island_by_group <- for_plots%>%
 
 ```{r}
 south_by_group <- for_plots%>%
-  filter(Group!="All groups",,
+  filter(Group!="All groups",
          Group!="Marine and Boat Trades",
          Drname=="Southeast")
   plt <- ts_plot(south_by_group)+
@@ -230,7 +230,7 @@ south_by_group <- for_plots%>%
 
 ```{r}
 north_by_group <- for_plots%>%
-  filter(Group!="All groups",,
+  filter(Group!="All groups",
          Group!="Marine and Boat Trades",
          Drname=="North")
   plt <- ts_plot(north_by_group)+

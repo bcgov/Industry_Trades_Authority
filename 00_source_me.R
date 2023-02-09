@@ -37,8 +37,8 @@ assert_that(length(list.files(here("data","current_ita"), pattern="CofQ"))==1,
             msg="The file CofQ_Apprenticeship_Challenge*.xlsx must be in folder data/current_ita")
 assert_that(length(list.files(here("data","current_ita"), pattern="New"))==1,
             msg="The file New_Apprenticeship_Registrations*.xlsx must be in folder data/current_ita")
-assert_that(length(list.files(here("data","current_lmo"), pattern="LMO_occ_char"))==1,
-            msg="The file *LMO_occ_char.csv must be in folder data/current_lmo")
+assert_that(length(list.files(here("data","current_lmo"), pattern="Occupational Characteristics"))==1,
+            msg="The file Occupational Characteristics*.xlsx must be in folder data/current_lmo")
 
 #archive old output
 filesstrings::file.move(here("out","current_output", list.files(here("out", "current_output"))),
@@ -56,7 +56,7 @@ rmarkdown::render("04_slide_deck.Rmd",
 
 tictoc::toc()
 #archive ita input files--------
-#filesstrings::file.move(here("data","current_ita", list.files(here("data", "current_ita"))), here("data", "old_ita"))
+filesstrings::file.move(here("data","current_ita", list.files(here("data", "current_ita"))), here("data", "old_ita"))
 
 
 

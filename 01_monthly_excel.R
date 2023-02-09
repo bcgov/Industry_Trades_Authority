@@ -10,6 +10,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
+#constants-----------------
+lmo_edition <- 2022
+plus_five <- lmo_edition+5
+plus_ten <- lmo_edition+10
+
 # libraries--------------
 library(tidyverse)
 library(readxl)
@@ -20,28 +25,31 @@ library(assertthat)
 # functions------------
 source(here("R", "functions.R"))
 # read in the data----------------
-occ_char <- read_csv(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "LMO_occ_char"))) %>%
+
+occ_char <- read_excel(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "Occupational Characteristics")), skip = 3) %>%
   clean_names()%>%
+  mutate(noc_code=str_sub(noc_2016, start=2), .after=noc_2016)%>%
   rename(
-    noc_code = noc,
     construction_trades = occ_group_construction_trades,
     trades = occ_group_trades,
-    stc = occ_group_trades_mandatory_certification
+    stc = occ_group_skilled_trades_certification
   )
+
 noc_list <- occ_char %>%
   select(
-    noc = noc_code,
+    noc_code,
     description,
-    lmo_job_openings_2021_2031,
-    `2021 Employment` = x2021_employment,
-    `2031 Employment` = x2031_employment,
-    `2021-2026 CAGR` = x1st_5_year_cagr,
-    `2026-2031 CAGR` = x2nd_5_year_cagr,
-    `2021-2031 CAGR` = x10_year_cagr,
+    ten_year_jo=lmo_job_openings_2022_2032, #numbers will need to change
+    emp_now = paste0("x",deparse(get("lmo_edition")),"_employment"),
+    emp_five = paste0("x",deparse(get("plus_five")),"_employment"),
+    emp_ten = paste0("x",deparse(get("plus_ten")),"_employment"),
     construction_trades,
     trades,
     stc
-  ) %>%
+  )%>%
+  mutate(ffy_cagr=scales::percent((emp_five/emp_now)^(.2)-1, accuracy=.1),
+         sfy_cagr=scales::percent((emp_ten/emp_five)^(.2)-1, accuracy=.1),
+         ty_cagr=scales::percent((emp_ten/emp_now)^(.1)-1, accuracy=.1))%>%
   nest(data = everything()) %>%
   mutate(
     construction_trades = map(data, filter_and_select, construction_trades, "Construction Trades"),
@@ -50,20 +58,26 @@ noc_list <- occ_char %>%
     all_trades = map(data, filter_and_select, trades, "Trades")
   ) %>%
   select(-data) %>%
-  pivot_longer(cols = everything())
+  pivot_longer(cols = everything())%>%
+  mutate(value=map(value, fix_column_names))
 
 mapping <- occ_char %>%
   select(
     noc_code,
+    description,
     construction_trades,
     trades,
     stc
   )
+write_csv(mapping, here("data","mapping","mapping.csv"))
+
+
 active <- read_clean_join("Active")
 cofq <- read_clean_join("CofQ")
 new_reg <- read_clean_join("New")
 
 new_reg%>%
+  na.omit()%>%
   mutate(date=lubridate::ym(paste(year,str_sub(month,1,2),sep = "-")))%>%
   summarize(max(date, na.rm=TRUE))%>%
   pull()%>%

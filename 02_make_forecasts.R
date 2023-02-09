@@ -18,9 +18,7 @@ library(here)
 library(janitor)
 
 # read in the data----------------
-mapping <- read_csv(here("data","mapping", "functional_groups.csv"))%>%
-  mutate(noc_code=str_replace_all(noc,"#",""))%>%
-  select(-noc)
+mapping <- read_csv(here("data","mapping", "functional_groups.csv"))
 
 new_reg <- read_xlsx(here("data",
                           "current_ita",
@@ -46,11 +44,10 @@ ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
 f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd registrations.
 max_year <- max(new_reg$year)
 
-lmo <- vroom::vroom(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "lmo")), skip = 2)%>%
+lmo <- vroom::vroom(here("data", "current_lmo", list.files(here("data", "current_lmo"), pattern = "employment")), skip = 2)%>%
   pivot_longer(cols=-c(NOC,Description, Industry, Variable,`Geographic Area`), names_to="year", values_to = "count")%>%
   clean_names()%>%
-  mutate(noc= str_replace_all(noc,"#",""))%>%
-  full_join(mapping, by=c("noc"="noc_code"), multiple = "all")%>%
+  full_join(mapping, by="noc", multiple = "all")%>%
   mutate(geographic_area=fct_recode(geographic_area,
                              `Vancouver Island and Coast`="Vancouver Island Coast",
                              `Lower Mainland Southwest`= "Mainland South West",

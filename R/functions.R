@@ -71,11 +71,9 @@ wider_with_totals <- function(tbbl) {
 }
 
 filter_and_select <- function(tbbl, var, value) {
-  temp <- tbbl %>%
+  tbbl %>%
     filter({{ var }} == value) %>%
     select(-construction_trades, -trades, -stc)
-  colnames(temp) <- wrapR::make_title(colnames(temp))
-  return(temp)
 }
 
 add_plot <- function(plt, sheet, wb) {
@@ -157,6 +155,17 @@ decomp_plot <- function(tbbl){
     theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
 }
 
+fix_column_names <- function(tbbl){
+  tbbl%>%
+    rename(
+      "Job openings: {lmo_edition}-{plus_ten}":=ten_year_jo,
+      "Employment: {lmo_edition}":=emp_now,
+      "Employment: {plus_five}":=emp_five,
+      "Employment: {plus_ten}":=emp_ten,
+      "Growth: {lmo_edition}-{plus_five}":=ffy_cagr,
+      "Growth: {plus_five}-{plus_ten}":= sfy_cagr,
+      "Growth: {lmo_edition}-{plus_ten}":= ty_cagr)
+}
 
 
 
