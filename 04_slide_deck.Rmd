@@ -20,6 +20,8 @@ output:
   beamer_presentation:
     theme: "Boadilla"
     fonttheme: "structurebold"
+urlcolor: blue
+linkcolor: blue
 classoption: "aspectratio=169"    
 ---
 
@@ -34,6 +36,7 @@ library(cansim)
 library(kableExtra)
 library(ggfortify)
 library(grid)
+library(tidyquant)
 add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))
@@ -81,7 +84,7 @@ forecast_growth <- bc_fcast%>%
 
 - Comparisons to same month last year:
   - New apprenticeship registrations in `r max_date` were `r describe_change(get_growth(new_reg_total, years, 1))`.
-  - Registrations in the Skilled Trade Certification (STC) trades occupations in `r max_date` were `r describe_change(get_growth(stc_new_reg, years, 1))`.
+  - Registrations in the Skilled Trades Certification (STC) trades occupations in `r max_date` were `r describe_change(get_growth(stc_new_reg, years, 1))`.
   - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_app, years, 1))` for Apprentices.
   - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_chal, years, 1))` for Trade Qualifiers.
 
@@ -104,7 +107,7 @@ decomp_plot(new_reg_total)
 ::::
 :::
 
-## New Apprentice Registrations: [Skilled Trade Certification*](#STC) 
+## New Apprentice Registrations: [Skilled Trades Certification*](#STC) 
 ::: columns 
 :::: {.column width=.05}
 ::::
@@ -205,7 +208,7 @@ get_cagr <- function(grp){
 :::
 
 
-## New Apprenticeship Registrations: [Skilled Trade Certification*](#STC)
+## New Apprenticeship Registrations: [Skilled Trades Certification*](#STC)
 ::: columns 
 :::: {.column width=.05}
 ::::

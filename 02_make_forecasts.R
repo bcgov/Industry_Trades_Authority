@@ -123,7 +123,7 @@ reg_shares <- full_join(full_years, lmo_employment)%>%
   mutate(prop_reg=new_reg/employment)
 
 prop_reg_utilized <- reg_shares%>%
-  filter(year %in% 2018:2019)%>%
+  filter(year %in% c(2018,2019,2021,2022))%>%
   group_by(drname, group)%>%
   summarize(prop_reg_utilized=mean(prop_reg))
 

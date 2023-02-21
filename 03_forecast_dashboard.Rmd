@@ -20,6 +20,7 @@ library(here)
 #functions--------------
 
 ts_plot <- function(tbbl){
+  current_year <- lubridate::year(lubridate::today())
   plt <- ggplot(tbbl, 
                 aes(Year, 
                     Forecast,
@@ -32,11 +33,13 @@ ts_plot <- function(tbbl){
                     "\nForecast = ",
                     scales::comma(Forecast, accuracy = 1))))+
   geom_line()+
+  geom_vline(xintercept = current_year, alpha=.2, lty=2)+
   scale_y_continuous(labels=scales::comma)+
   theme_minimal()+
   labs(x="",
        y="New Registrations")+
-    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
+    theme(axis.text.x = element_text(angle = 20, vjust = .5, hjust=1))+
+    theme(text = element_text(size = 14))
   plt 
 }
 
@@ -60,6 +63,7 @@ page_titles <- c("Title Page",#replace with your page titles
                  "Methodology",
                  "All groups, British Columbia",
                  "All groups, by region",
+                 "Skilled Trades Certification (STC), by region",
                  "British Columbia, by group",
                  "Lower Mainland Southwest",
                  "Vancouver Island and Coast",
@@ -72,13 +76,13 @@ page_titles <- c("Title Page",#replace with your page titles
 
 # `r page_titles[1]` {data-navmenu="Table of Contents"}
 
-## Row {data-height="600"}
+## Row {data-height="400"}
 
 ```{r, out.width = "150%"}
-knitr::include_graphics("aest.png")#the cover image
+knitr::include_graphics("psfs.png")#the cover image
 ```
 
-## Row {data-height="400"}
+## Row {data-height="600"}
 
 ### 
 
@@ -90,7 +94,7 @@ knitr::include_graphics("aest.png")#the cover image
 
 # `r page_titles[2]` {data-navmenu="Table of Contents"}
 
-## Row
+## Row  {data-height="700"}
 
 ```{r}
 # for methodology explanation.
@@ -112,11 +116,11 @@ fcast_tbbl%>%
 
 ### Methodology
 
-*  For example, consider the data above (all trades groups, all regions).
+*  For example, consider the data above (all trades groups for British Columbia).
 *  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**. For the (potentially incomplete) last year of data, see column **Scaled Up**. 
 *   **Employment** is from the LMO forecast, upon which we build the demand-driven forecast of new apprenticeship registrations.
 *   **Prop Reg** gives the proportion of observed **New Reg** relative to **Employment**.
-*   **Prop Reg Utilized** is the average of **Prop Reg** for the years 2018 and 2019.
+*   **Prop Reg Utilized** is the average of **Prop Reg** for the years 2018, 2019, 2021, 2022.
 *   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
 *   **Obs And Fcast** equals **New Reg** when available and **Demand Driven Fcast** otherwise.
 *   **Scaled Up** is the monthly average for the last year, times 12.
@@ -161,15 +165,16 @@ by_region <- for_plots%>%
 ### 
 
 ```{r}
-bc_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Marine and Boat Trades",
-         Drname=="British Columbia")
-  plt <- ts_plot(bc_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free")+
-    labs(title="British Columbia by trades groups")
+by_region <- for_plots%>%
+  filter(Group=="Skilled Trades Certification (STC)",
+         Drname!="NULL",
+         Drname!="British Columbia")
+  plt <- ts_plot(by_region)+
+    facet_wrap(~fct_reorder(Drname, Forecast, .desc = TRUE), scales = "free_y")+
+    labs(title="Skilled Trades Certification (STC), by region")
   ggplotly(plt, tooltip = "text")
 ```
+
 
 # `r page_titles[6]` {data-navmenu="Table of Contents"}
 
@@ -178,13 +183,13 @@ bc_by_group <- for_plots%>%
 ### 
 
 ```{r}
-lml_by_group <- for_plots%>%
+bc_by_group <- for_plots%>%
   filter(Group!="All groups",
-         Group!="Marine and Boat Trades",
-         Drname=="Lower Mainland Southwest")
-  plt <- ts_plot(lml_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
-    labs(title="Lower Mainland Southwest by trades groups")
+         Group!="Skilled Trades Certification (STC)",
+         Drname=="British Columbia")
+  plt <- ts_plot(bc_by_group)+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free")+
+    labs(title="British Columbia by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
 
@@ -195,13 +200,13 @@ lml_by_group <- for_plots%>%
 ### 
 
 ```{r}
-island_by_group <- for_plots%>%
+lml_by_group <- for_plots%>%
   filter(Group!="All groups",
-         Group!="Marine and Boat Trades",
-         Drname=="Vancouver Island and Coast")
-  plt <- ts_plot(island_by_group)+
+         Group!="Skilled Trades Certification (STC)",
+         Drname=="Lower Mainland Southwest")
+  plt <- ts_plot(lml_by_group)+
     facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
-    labs(title="Vancouver Island and Coast by trades groups")
+    labs(title="Lower Mainland Southwest by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
 
@@ -212,13 +217,13 @@ island_by_group <- for_plots%>%
 ### 
 
 ```{r}
-south_by_group <- for_plots%>%
+island_by_group <- for_plots%>%
   filter(Group!="All groups",
-         Group!="Marine and Boat Trades",
-         Drname=="Southeast")
-  plt <- ts_plot(south_by_group)+
+         Group!="Skilled Trades Certification (STC)",
+         Drname=="Vancouver Island and Coast")
+  plt <- ts_plot(island_by_group)+
     facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
-    labs(title="Southeast by trades groups")
+    labs(title="Vancouver Island and Coast by trades groups")
   ggplotly(plt, tooltip = "text")
 ```
 
@@ -229,9 +234,26 @@ south_by_group <- for_plots%>%
 ### 
 
 ```{r}
+south_by_group <- for_plots%>%
+  filter(Group!="All groups",
+         Group!="Skilled Trades Certification (STC)",
+         Drname=="Southeast")
+  plt <- ts_plot(south_by_group)+
+    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
+    labs(title="Southeast by trades groups")
+  ggplotly(plt, tooltip = "text")
+```
+
+# `r page_titles[10]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r}
 north_by_group <- for_plots%>%
   filter(Group!="All groups",
-         Group!="Marine and Boat Trades",
+         Group!="Skilled Trades Certification (STC)",
          Drname=="North")
   plt <- ts_plot(north_by_group)+
     facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
@@ -239,7 +261,7 @@ north_by_group <- for_plots%>%
   ggplotly(plt, tooltip = "text")
 ```
 
-# `r page_titles[10]` {data-navmenu="Table of Contents"}
+# `r page_titles[11]` {data-navmenu="Table of Contents"}
 
 ## Inputs {.sidebar}
 

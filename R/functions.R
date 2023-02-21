@@ -128,13 +128,19 @@ fix_dates <- function(tbbl){
 }
 
 forecast_plot <- function(tbbl, grp){
-   ggplot()+
+  tbbl <- tbbl%>%
+    filter(group==grp)
+  text_y <- (min(tbbl$forecast)+max(tbbl$forecast))/2
+  text_x <- (rect_df$xmin+rect_df$xmax)/2
+  ggplot()+
     geom_rect(data=rect_df, mapping=aes(xmin=xmin,xmax=xmax,ymin=-Inf,ymax=Inf), alpha=.1)+
     geom_line(data=filter(tbbl, group==grp), mapping=aes(year, forecast, group=1))+
+    annotate("text", x=text_x, y=text_y, label="Forecast")+
     scale_y_continuous(labels=scales::comma)+
     scale_x_continuous(breaks = scales::pretty_breaks(n = 16))+
     labs(x="",y="",colour="")+
-    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
+    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))+
+    theme(text = element_text(size = 20))
 }
 
 decomp_plot <- function(tbbl){
@@ -152,7 +158,8 @@ decomp_plot <- function(tbbl){
     scale_y_continuous(labels=scales::comma)+
     scale_x_date(breaks=x_breaks, date_labels = "%b %Y")+
     labs(x="",y="")+
-    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))
+    theme(axis.text.x = element_text(angle = 30, vjust = 1, hjust=1))+
+    theme(text = element_text(size = 20))
 }
 
 fix_column_names <- function(tbbl){
