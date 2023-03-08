@@ -39,6 +39,7 @@ library(grid)
 library(tidyquant)
 add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
+theme_set(theme_grey(base_size = 15))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))
 new_reg <- read_clean_join("New")
 

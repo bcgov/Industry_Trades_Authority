@@ -17,6 +17,7 @@ library(crosstalk)
 library(DT)
 library(plotly)
 library(here)
+theme_set(theme_grey(base_size = 15))
 #functions--------------
 
 ts_plot <- function(tbbl){
