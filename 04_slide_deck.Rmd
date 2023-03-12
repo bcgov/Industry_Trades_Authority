@@ -97,7 +97,7 @@ forecast_growth <- bc_fcast%>%
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{New Registrations are back to pre-pandemic levels} 
+### \textcolor{bcblue}{New Registrations are above pre-pandemic levels} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
 decomp_plot(new_reg_total)
 ```
