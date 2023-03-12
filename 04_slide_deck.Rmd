@@ -282,7 +282,7 @@ get_cagr <- function(grp){
 stc <- mapping%>%
   filter(stc=="First Ten MC Trades")%>%
   select(noc_code, description)
-colnames(stc) <- wrapR::make_title(colnames(stc))
+colnames(stc) <- c("NOC Code", "Description")
 kable(stc, booktabs = T)%>%
   kable_styling(latex_options = "striped")
 ```
@@ -307,7 +307,7 @@ sbt <- new_reg%>%
   select(noc_code, description)%>%
   distinct()%>%
   na.omit()
-colnames(sbt) <- wrapR::make_title(colnames(sbt))
+colnames(sbt) <- c("NOC Code", "Description")
 kable(sbt, booktabs = T)%>%
   kable_styling(latex_options = "striped", font_size = 7)
 ```
@@ -317,7 +317,7 @@ kable(sbt, booktabs = T)%>%
 ```{r, message=FALSE}
 all_trades <- new_reg%>%
   filter(trades=="Trades")%>%
-  select(noc_code,description)%>%
+  select(noc_code, description)%>%
   distinct()
 
 first <- head(all_trades, n=ceiling(nrow(all_trades)/2))
@@ -326,9 +326,9 @@ all <- bind_cols(first, second)
 
 kable(all, 
       booktabs = T,
-      col.names = c("NOC",
+      col.names = c("NOC Code",
                            "Description",
-                           "NOC",
+                           "NOC Code",
                            "Description"))%>%
   kable_styling(latex_options = "striped", font_size = 5)
 ```
