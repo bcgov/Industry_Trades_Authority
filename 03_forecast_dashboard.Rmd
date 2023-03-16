@@ -46,7 +46,7 @@ ts_plot <- function(tbbl){
 
 fcast_tbbl <- read_rds(here("temp","fcast_tbbl.rds"))%>%
   arrange(drname,  group, year)%>%
-  mutate(across(c(prop_reg, prop_reg_utilized), function(x) round(x, 3)),
+  mutate(prop_reg_utilized=round(prop_reg_utilized, 3),
          across(c(new_reg,
             employment,
             demand_driven_fcast,
@@ -120,8 +120,7 @@ fcast_tbbl%>%
 *  For example, consider the data above (all trades groups for British Columbia).
 *  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**. For the (potentially incomplete) last year of data, see column **Scaled Up**. 
 *   **Employment** is from the LMO forecast, upon which we build the demand-driven forecast of new apprenticeship registrations.
-*   **Prop Reg** gives the proportion of observed **New Reg** relative to **Employment**.
-*   **Prop Reg Utilized** is the average of **Prop Reg** for the years 2018, 2019, 2021, 2022.
+*   **Prop Reg Utilized** is $\frac{\sum \mbox{new registration}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019, 2021, 2022.
 *   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
 *   **Obs And Fcast** equals **New Reg** when available and **Demand Driven Fcast** otherwise.
 *   **Scaled Up** is the monthly average for the last year, times 12.

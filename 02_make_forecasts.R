@@ -119,15 +119,14 @@ lmo_all_groups <- lmo%>%
 
 lmo_employment <- bind_rows(lmo_emp_disagg, lmo_all_groups)
 
-reg_shares <- full_join(full_years, lmo_employment)%>%
-  mutate(prop_reg=new_reg/employment)
+reg_and_employment <- full_join(full_years, lmo_employment)
 
-prop_reg_utilized <- reg_shares%>%
-  filter(year %in% c(2018,2019,2021,2022))%>%
+prop_reg_utilized <- reg_and_employment%>%
+  filter(year %in% c(2016:2019,2021,2022))%>%
   group_by(drname, group)%>%
-  summarize(prop_reg_utilized=mean(prop_reg))
+  summarize(prop_reg_utilized=sum(new_reg)/sum(employment))
 
-fcast_tbbl <- full_join(reg_shares, prop_reg_utilized)%>%
+fcast_tbbl <- full_join(reg_and_employment, prop_reg_utilized)%>%
   mutate(demand_driven_fcast=round(employment*prop_reg_utilized, 0),
          obs_and_fcast=if_else(is.na(new_reg), demand_driven_fcast, new_reg))%>%
   filter(!is.na(obs_and_fcast))%>%
