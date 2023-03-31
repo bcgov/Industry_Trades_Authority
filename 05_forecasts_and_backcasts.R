@@ -17,6 +17,14 @@ library(openxlsx)
 library(here)
 library(janitor)
 
+get_nrmse <- function(tbbl){
+  tbbl%>%
+    pivot_wider()%>%
+    filter(!is.na(observed))%>%
+    mutate(sq_diff=(observed-backcast)^2)%>%
+    summarize(nrmse=scales::percent(sqrt(mean(sq_diff))/mean(observed), accuracy=.01))%>%
+    pull(nrmse)
+}
 
 make_plot <- function(tbbl, group, noc){
   if(is.na(noc)){
@@ -24,6 +32,8 @@ make_plot <- function(tbbl, group, noc){
   }else{
     title=paste(group, noc, sep=": ")
   }
+  tbbl <- tbbl%>%
+    unite("thing", thing, nrmse, sep = ": Normalized RMSE = ")
   ggplot(tbbl, aes(year, value, colour=name))+
     geom_line(lwd=2)+
     scale_y_continuous(labels=scales::comma)+
@@ -31,7 +41,7 @@ make_plot <- function(tbbl, group, noc){
          x="",
          y="",
          colour="")+
-    theme_minimal(base_size = 15)+
+    theme_grey(base_size = 15)+
     expand_limits(y = 0)+
     facet_wrap(~thing)
 }
@@ -186,10 +196,14 @@ prop_reg_utilized <- reg_and_employment%>%
   na.omit()
 
 #visualize relationships between props
-inner_join(prop_reg_utilized, prop_seats_utilized)%>%
-  ggplot(aes(prop_reg_utilized, prop_seats_utilized))+
-  geom_point()+
-  geom_abline(slope=1, intercept = 0)
+props <- inner_join(prop_reg_utilized, prop_seats_utilized)%>%
+  rename(grouping=group)
+plt <- ggplot(props, aes(prop_reg_utilized, prop_seats_utilized, text=grouping))+
+  geom_point(alpha=.5)+
+  geom_abline(slope=1, intercept = 0)+
+  scale_y_continuous(trans="log", labels=scales::comma)+
+  scale_x_continuous(trans="log", labels=scales::comma)
+plotly::ggplotly(plt, tooltip = "text")
 
 
 reg_tbbl <- full_join(reg_and_employment, prop_reg_utilized)%>%
@@ -214,8 +228,8 @@ reg_tbbl <- full_join(reg_and_employment, prop_reg_utilized)%>%
   mutate(num_rows=map(data, nrow))%>%
   filter(num_rows>20)%>%
   select(-num_rows)%>%
+  mutate(nrmse=map_chr(data, get_nrmse))%>%
   unnest(data)
-
 
 seats_tbbl <- full_join(seats_and_employment, prop_seats_utilized)%>%
   mutate(prop_cast=round(employment*prop_seats_utilized, 0),
@@ -237,12 +251,29 @@ seats_tbbl <- full_join(seats_and_employment, prop_seats_utilized)%>%
   mutate(num_rows=map(data, nrow))%>%
   filter(num_rows>20)%>%
   select(-num_rows)%>%
+  mutate(nrmse=map_chr(data, get_nrmse))%>%
   unnest(data)
+
 
 nested <- bind_rows(reg_tbbl, seats_tbbl)%>%
   group_by(group, noc)%>%
   nest()%>%
   mutate(plot=pmap(list(data, group, noc), make_plot))
+
+nrmse <- nested%>%
+  unnest(data)%>%
+  select(group, noc, thing, nrmse)%>%
+  unique()%>%
+  pivot_wider(names_from = thing, values_from = nrmse, names_prefix = "NRMSE: ")
+
+wide <- nested%>%
+  select(-plot)%>%
+  unnest(data)%>%
+  pivot_wider(names_from = year, values_from = value)
+
+
+write_csv(wide, here("out","current_output","wide_format.csv"))
+write_csv(nrmse, here("out","current_output","Normalized RMSE.csv"))
 
 pdf(here("out","current_output", "reg_and_seats.pdf"), onefile = TRUE, height=8.5, width=11)
 nested%>%
