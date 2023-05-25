@@ -1,0 +1,98 @@
+---
+title: "Trades Registration Forecasts based on LMO Scenerios"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+runtime: shiny
+resource_files:
+- processed/scenerios.rds
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+plot_reg <- function(reg, grp){
+  filtered_data <- all_data%>%
+    filter(drname==reg,
+           trade_group==grp)
+    
+  ggplot(filtered_data, aes(year, forecast, colour=lmo))+
+    # annotate(geom = "rect", 
+    #             xmin=2023, xmax=2032, ymin=-Inf, ymax=+Inf, 
+    #             fill='grey', alpha=.5)+
+    geom_line()+
+    geom_line(data=filtered_data%>%filter(year<2023), colour="black")+  
+    scale_y_continuous(labels=scales::comma)+
+    scale_colour_brewer(palette = "Dark2")+
+    labs(x="",
+         y="New Registration Forecasts",
+         colour="LMO Scenerio",
+         title=paste0("Forecast of New Registrations: ", reg," - ", grp))
+}
+all_data <- read_rds(here::here("processed","scenerios.rds"))%>%
+  rename(trade_group=group)%>%
+  filter(drname!="NULL")
+```
+
+
+Inputs {.sidebar}
+-------------------------------------
+
+```{r}
+selectInput(
+  "region",
+  "Select a Region",
+  unique(all_data$drname),
+  selected = "British Columbia",
+  multiple = FALSE
+)
+selectInput(
+  "grp",
+  "Select a trade Group",
+  unique(all_data$trade_group),
+  selected = "All groups",
+  multiple = FALSE
+)
+```
+
+Column {.tabset}
+------------------------------------- 
+
+### Plots:
+
+```{r}
+plotly::renderPlotly({
+  plot_reg(input$region, input$grp)%>%
+    wrapR::plotlify(" ", 18, pal="Dark2")
+})
+```
+
+### The data
+
+```{r}
+DT::renderDT({
+all_data%>%
+    filter(drname==input$region,
+           trade_group==input$grp,
+           year>year(today())-1)%>%
+  pivot_wider(names_from = lmo, values_from = forecast)%>%
+  DT::datatable(extensions = "Buttons", 
+              options = list(rownames = FALSE, 
+                             columnDefs = list(list(className = 'dt-center', targets = "_all")),
+                             paging = TRUE,
+                             scrollX=TRUE,
+                             scrollY=TRUE,
+                             searching = TRUE,
+                             ordering = TRUE,
+                             dom = 'Btip',
+                             buttons = list(
+                                list(extend = 'csv', filename =  paste("Registration Forecast", input$region, input$grp, sep = "-")),
+                                list(extend = 'excel', filename =  paste("Registration Forecast", input$region, input$grp, sep = "-"))
+                             )), rownames = FALSE)%>%
+    DT::formatRound(columns=c("Base", "Scenerio 1", "Scenerio 2", "Scenerio 3"), digits=0)
+})
+```
+
+
+

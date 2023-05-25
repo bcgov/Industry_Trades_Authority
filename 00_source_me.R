@@ -57,7 +57,7 @@ rmarkdown::render("04_slide_deck.Rmd",
 
 tictoc::toc()
 #archive ita input files--------
-#filesstrings::file.move(here("current_data","ita", list.files(here("current_data", "ita"))), here("old_data", "ita"))
+filesstrings::file.move(here("current_data","ita", list.files(here("current_data", "ita"))), here("old_data", "ita"))
 
 
 

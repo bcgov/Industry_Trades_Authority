@@ -196,13 +196,20 @@ prop_reg_utilized <- reg_and_employment%>%
   na.omit()
 
 #visualize relationships between props
+
+ave_reg <- reg_and_employment%>%
+  group_by(group)%>%
+  summarize(mean_reg=mean(observed, na.rm=TRUE))
+
 props <- inner_join(prop_reg_utilized, prop_seats_utilized)%>%
+  inner_join(ave_reg)%>%
   rename(grouping=group)
-plt <- ggplot(props, aes(prop_reg_utilized, prop_seats_utilized, text=grouping))+
+plt <- ggplot(props, aes(prop_reg_utilized, prop_seats_utilized, text=grouping, size=mean_reg))+
   geom_point(alpha=.5)+
   geom_abline(slope=1, intercept = 0)+
   scale_y_continuous(trans="log", labels=scales::comma)+
-  scale_x_continuous(trans="log", labels=scales::comma)
+  scale_x_continuous(trans="log", labels=scales::comma)+
+  scale_size(range = c(.1, 20), name="Average New Registrations")
 plotly::ggplotly(plt, tooltip = "text")
 
 

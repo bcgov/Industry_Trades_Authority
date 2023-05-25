@@ -22,7 +22,8 @@ output:
     fonttheme: "structurebold"
 urlcolor: blue
 linkcolor: blue
-classoption: "aspectratio=169"    
+classoption: "aspectratio=169"
+always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -97,7 +98,7 @@ forecast_growth <- bc_fcast%>%
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{New Registrations are above pre-pandemic levels} 
+### \textcolor{bcblue}{Spike in March might have been outlier.} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
 decomp_plot(new_reg_total)
 ```
@@ -113,7 +114,7 @@ decomp_plot(new_reg_total)
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{STC new registrations growing rapidly} 
+### \textcolor{bcblue}{Spike in March might have been outlier.} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
   decomp_plot(stc_new_reg)
 ```
@@ -164,7 +165,7 @@ decomp_plot(cofq_app)
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{The challenge route is trending downwards} 
+### \textcolor{bcblue}{The challenge route has stabilized.} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
 decomp_plot(cofq_chal)
 ```
