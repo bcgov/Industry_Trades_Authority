@@ -1,7 +1,7 @@
 read_clean_join <- function(pat) {
-  read_xlsx(here("current_data", "ita", list.files(here("current_data", "ita"), pattern = pat))) %>%
+  temp <- read_xlsx(here("current_data", "ita", list.files(here("current_data", "ita"), pattern = pat))) %>%
     clean_names() %>%
-    mutate(noc_code = as.character(noc_code)) %>%
+    mutate(noc_code = as.character(noc_code_2021)) %>%
     full_join(mapping, by = "noc_code") %>%
     rename(
       year = contains("year"),
@@ -64,7 +64,7 @@ make_plt <- function(tbbl, label = NULL, smooth = TRUE, title=NULL) {
 wider_with_totals <- function(tbbl) {
   temp <- tbbl %>%
     pivot_wider(names_from = month, values_from = count) %>%
-    mutate(year = as.character(year)) %>%
+    mutate(year = as.character(year))|>
     adorn_totals(c("row", "col"))
   colnames(temp) <- wrapR::make_title(colnames(temp))
   return(temp)
@@ -73,7 +73,7 @@ wider_with_totals <- function(tbbl) {
 filter_and_select <- function(tbbl, var, value) {
   tbbl %>%
     filter({{ var }} == value) %>%
-    select(-construction_trades, -trades, -stc)
+    select(-construction_trades, -trades, -stc, -non_construction_trades)
 }
 
 add_plot <- function(plt, sheet, wb) {
