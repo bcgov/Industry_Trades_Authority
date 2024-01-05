@@ -10,8 +10,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and limitations under the License.
 
+#' NOTE THAT COLUMN NAMES CHANGE IN OCCUPATIONAL CHARACTERISTICS FILE, AND THE lmo_edition NEEDS TO BE CHANGED YEARLY
+
 #constants-----------------
-lmo_edition <- 2022
+lmo_edition <- 2023
 plus_five <- lmo_edition+5
 plus_ten <- lmo_edition+10
 
@@ -22,27 +24,35 @@ library(openxlsx)
 library(here)
 library(janitor)
 library(assertthat)
+library(conflicted)
+conflicts_prefer(dplyr::filter)
 # functions------------
 source(here("R", "functions.R"))
 # read in the data----------------
 
-occ_char <- read_excel(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "Occupational Characteristics")), skip = 3) %>%
-  clean_names()%>%
-  mutate(noc_code=str_sub(noc_2016, start=2), .after=noc_2016)%>%
+occ_char <- read_excel(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "Occupational Characteristics")))|>
+  mutate(noc_code=str_sub(NOC, start=2), .after=NOC)|>
   rename(
-    construction_trades = occ_group_construction_trades,
-    trades = occ_group_trades,
-    stc = occ_group_skilled_trades_certification
-  )
+    construction_trades = `Occ Group: Construction Trades`, #WATCH OUT FOR POSSIBLE NAME CHANGE
+    trades = `Occ Group: Trades`, #WATCH OUT FOR POSSIBLE NAME CHANGE
+    stc = `Occ Group: Skilled Trades Certification` #WATCH OUT FOR POSSIBLE NAME CHANGE
+  )|>
+  mutate(non_construction_trades=if_else(
+    construction_trades=="Non-Construction Trades" &
+      trades=="Trades",
+    "Non-Construction Trades",
+    NA_character_
+      ))
 
 noc_list <- occ_char %>%
   select(
     noc_code,
-    description,
-    ten_year_jo=lmo_job_openings_2022_2032, #numbers will need to change
-    emp_now = paste0("x",deparse(get("lmo_edition")),"_employment"),
-    emp_five = paste0("x",deparse(get("plus_five")),"_employment"),
-    emp_ten = paste0("x",deparse(get("plus_ten")),"_employment"),
+    Description,
+    ten_year_jo=`LMO Job Openings 2023-2033`, #NAMES CHANGE YEARLY
+    emp_now = `LMO Employment 2023`, #NAMES CHANGE YEARLY
+    emp_five = `LMO Employment 2028`, #NAMES CHANGE YEARLY
+    emp_ten = `LMO Employment 2033`, #NAMES CHANGE YEARLY
+    non_construction_trades,
     construction_trades,
     trades,
     stc
@@ -53,8 +63,8 @@ noc_list <- occ_char %>%
   nest(data = everything()) %>%
   mutate(
     construction_trades = map(data, filter_and_select, construction_trades, "Construction Trades"),
-    non_construction_trades = map(data, filter_and_select, construction_trades, "Non-Construction Trades"),
-    stc = map(data, filter_and_select, stc, "First Ten MC Trades"),
+    non_construction_trades = map(data, filter_and_select, non_construction_trades, "Non-Construction Trades"),
+    stc = map(data, filter_and_select, stc, "STC Trades"),
     all_trades = map(data, filter_and_select, trades, "Trades")
   ) %>%
   select(-data) %>%
@@ -64,8 +74,9 @@ noc_list <- occ_char %>%
 mapping <- occ_char %>%
   select(
     noc_code,
-    description,
+    Description,
     construction_trades,
+    non_construction_trades,
     trades,
     stc
   )
@@ -94,7 +105,7 @@ active_nested <- active %>%
     non_construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Non-Construction Trades"),
     non_construction_trades__plot = map(non_construction_trades, make_plt, label=construction_trades, smooth=FALSE, title="Active Apprenticeships"),
     non_construction_trades__table = map(non_construction_trades, wider_with_totals),
-    stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades"),
+    stc = map(data, filter_and_aggregate, stc, "equal", "STC Trades"),
     stc__plot = map(stc, make_plt, label=stc, smooth=FALSE, title="Active Apprenticeships"),
     stc__table = map(stc, wider_with_totals),
     all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades"),
@@ -131,7 +142,7 @@ cofq_nested <- cofq %>%
     non_construction_trades = map(data, filter_and_aggregate, construction_trades, "equal", "Non-Construction Trades", grp = program_type),
     non_construction_trades__plot = map(non_construction_trades, make_plt, label = program_type, title="Certificates of Qualification"),
     non_construction_trades__table = map(non_construction_trades, wider_with_totals),
-    stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades", grp = program_type),
+    stc = map(data, filter_and_aggregate, stc, "equal", "STC Trades", grp = program_type),
     stc__plot = map(stc, make_plt, label = program_type, title = "Certificates of Qualification"),
     stc__table = map(stc, wider_with_totals),
     all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades", grp = program_type),
@@ -158,6 +169,9 @@ cofq_nested %>%
 noc_list %>%
   mutate(walk2(name, value, writeDataTable, wb = cofq_wb, startRow = 19))
 saveWorkbook(cofq_wb, here("out", "current_output", str_replace_all(paste0("cofq_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
+
+
+
 # new reg--------------
 new_reg_nested <- new_reg %>%
   nest(data = everything()) %>%
@@ -165,7 +179,7 @@ new_reg_nested <- new_reg %>%
     construction_trades = map(data, filter_and_aggregate, construction_trades, "not equal", "Non-Trades"),
     construction_trades__table = map(construction_trades, wider_with_totals),
     construction_trades__plot = map(construction_trades, make_plt, label = construction_trades, title = "New Registrations"),
-    stc = map(data, filter_and_aggregate, stc, "equal", "First Ten MC Trades"),
+    stc = map(data, filter_and_aggregate, stc, "equal", "STC Trades"),
     stc__plot = map(stc, make_plt, label = stc, title = "New Registrations"),
     stc__table = map(stc, wider_with_totals),
     all_trades = map(data, filter_and_aggregate, trades, "equal", "Trades"),

@@ -13,52 +13,36 @@ params:
 library(flexdashboard)
 library(knitr)
 library(tidyverse)
-library(crosstalk)
 library(DT)
 library(plotly)
 library(here)
 theme_set(theme_grey(base_size = 15))
 #functions--------------
-
-ts_plot <- function(tbbl){
-  current_year <- lubridate::year(lubridate::today())
-  plt <- ggplot(tbbl, 
-                aes(Year, 
-                    Forecast,
-                    group=1,
-                    text=paste0(Drname,
-                    "\n",
-                    Group,
-                    "\n",
-                    Year,
-                    "\nForecast = ",
-                    scales::comma(Forecast, accuracy = 1))))+
-  geom_line()+
-  geom_vline(xintercept = current_year, alpha=.2, lty=2)+
-  scale_y_continuous(labels=scales::comma)+
-  theme_minimal()+
-  labs(x="",
-       y="New Registrations")+
-    theme(axis.text.x = element_text(angle = 20, vjust = .5, hjust=1))+
-    theme(text = element_text(size = 14))
-  plt 
+plot_casts <- function(tbbl){
+    ggplot(tbbl, aes(year, value, group=name, colour=name))+
+    annotate(geom = "rect",
+             xmin = c(2016, 2021),
+             xmax = c(2019, max_year),
+             ymin = -Inf,
+             ymax = +Inf,
+             alpha = 0.2) +
+    geom_line()+
+    facet_wrap(~fct_reorder(group, -value), scales = "free")+
+    scale_y_continuous(labels = scales::comma)+
+    labs(x=NULL, 
+         y=NULL,
+         colour=NULL
+    )
 }
+#load dataframes-------------------
+fcast_tbbl <- read_rds(here("processed","fcast_tbbl.RDS"))
+fcast_long <- read_rds(here("processed","fcast_long.RDS"))
 
-fcast_tbbl <- read_rds(here("temp","fcast_tbbl.rds"))%>%
-  arrange(drname,  group, year)%>%
-  mutate(prop_reg_utilized=round(prop_reg_utilized, 3),
-         across(c(new_reg,
-            employment,
-            demand_driven_fcast,
-            obs_and_fcast,
-            scaled_up,
-            forecast),  function(x) scales::comma(x, accuracy=1))
-         )
-colnames(fcast_tbbl) <- wrapR::make_title(colnames(fcast_tbbl))
-shared_fcast <- SharedData$new(fcast_tbbl)
-
-for_plots <- read_rds(here("temp","for_plots.rds"))
-colnames(for_plots) <- wrapR::make_title(colnames(for_plots))
+max_year <- fcast_tbbl|>
+  filter(!is.na(`New Registrations`))|>
+  slice_max(year, with_ties = FALSE)|>
+  pull(year)|>
+  as.numeric()
 
 page_titles <- c("Title Page",#replace with your page titles
                  "Methodology",
@@ -100,9 +84,11 @@ knitr::include_graphics("psfs.png")#the cover image
 ```{r}
 # for methodology explanation.
 fcast_tbbl%>%
-  filter(Drname=="British Columbia",
-         Group=="All groups",
-         Year<lubridate::year(lubridate::today()+lubridate::years(2)))%>%
+  filter(drname=="British Columbia",
+         group=="All groups")%>%
+  mutate(across(`2016:2019 ratio`:`both period ratio`, ~ round(.x, 4)),
+         across(`New Registrations`:employment, ~ round(.x))
+         )|>
    DT::datatable(
     rownames = FALSE,
     escape = FALSE,
@@ -118,13 +104,15 @@ fcast_tbbl%>%
 ### Methodology
 
 *  For example, consider the data above (all trades groups for British Columbia).
-*  **New Reg** is the aggregate value of new registrations for a given **Year**, **Drname** and **Group**. For the (potentially incomplete) last year of data, see column **Scaled Up**. 
-*   **Employment** is from the LMO forecast, upon which we build the demand-driven forecast of new apprenticeship registrations.
-*   **Prop Reg Utilized** is $\frac{\sum \mbox{new registration}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019, 2021, 2022.
-*   **Demand Driven Fcast** is the product of **Employment** and **Prop Reg Utilized**.
-*   **Obs And Fcast** equals **New Reg** when available and **Demand Driven Fcast** otherwise.
-*   **Scaled Up** is the monthly average for the last year, times 12.
-*   **Forecast** equals **Obs And Fcast**, with the exception of the last year: it is the weighted average of **Scaled Up** and **Obs And Fcast** where the weight on **Scaled Up** is the number of months for which we have data. e.g. If we have data till September, the weight on **Scaled Up** is 9/12.
+*  **New Registrations ** is the aggregate value of new registrations for a given **year**, **drname** and **group**. 
+*  Note that for the (likely incomplete) last year of data, New Registrations is 12 times the year-to-date monthly average.
+*   **employment** is from the LFS pre 2021, and from the LMO forecast for 2021 onwards.
+*   **2016:2019 ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019.
+*   **2021:2023 ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2021, 2022, 2023.
+*   **both period ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019, 2021, 2022, 2023.
+*   **based on 2016:2019 ratio** is employment times 2016:2019 ratio.
+*   **based on 2021:2023 ratio** is employment times 2021:2023 ratio.
+*   **based on both periods** is employment times both period ratio.
 
 # `r page_titles[3]` {data-navmenu="Table of Contents"}
 
@@ -132,13 +120,12 @@ fcast_tbbl%>%
 
 ### 
 
-```{r}
-total <- for_plots%>%
-  filter(Drname=="British Columbia",
-         Group=="All groups")
-  plt <- ts_plot(total)+
+```{r fig.width=16, fig.height=8}
+total <- fcast_long%>%
+  filter(drname=="British Columbia",
+         group=="All groups")
+plot_casts(total)+
     labs(title="British Columbia / All trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[4]` {data-navmenu="Table of Contents"}
@@ -147,15 +134,13 @@ total <- for_plots%>%
 
 ### 
 
-```{r}
-by_region <- for_plots%>%
-  filter(Group=="All groups",
-         Drname!="NULL",
-         Drname!="British Columbia")
-  plt <- ts_plot(by_region)+
-    facet_wrap(~fct_reorder(Drname, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+by_region <- fcast_long%>%
+  filter(group=="All groups",
+         drname!="British Columbia")
+plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
     labs(title="All trades groups by region")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[5]` {data-navmenu="Table of Contents"}
@@ -164,15 +149,13 @@ by_region <- for_plots%>%
 
 ### 
 
-```{r}
-by_region <- for_plots%>%
-  filter(Group=="Skilled Trades Certification (STC)",
-         Drname!="NULL",
-         Drname!="British Columbia")
-  plt <- ts_plot(by_region)+
-    facet_wrap(~fct_reorder(Drname, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+by_region <- fcast_long%>%
+  filter(group=="STC Trades",
+         drname!="British Columbia")
+plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
     labs(title="Skilled Trades Certification (STC), by region")
-  ggplotly(plt, tooltip = "text")
 ```
 
 
@@ -182,15 +165,14 @@ by_region <- for_plots%>%
 
 ### 
 
-```{r}
-bc_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Skilled Trades Certification (STC)",
-         Drname=="British Columbia")
-  plt <- ts_plot(bc_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free")+
+```{r fig.width=16, fig.height=8}
+bc_by_group <- fcast_long%>%
+  filter(group!="All groups",
+         group!="STC Trades",
+         drname=="British Columbia")
+plot_casts(bc_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free")+
     labs(title="British Columbia by trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[7]` {data-navmenu="Table of Contents"}
@@ -199,15 +181,14 @@ bc_by_group <- for_plots%>%
 
 ### 
 
-```{r}
-lml_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Skilled Trades Certification (STC)",
-         Drname=="Lower Mainland Southwest")
-  plt <- ts_plot(lml_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+lml_by_group <- fcast_long%>%
+  filter(group!="All groups",
+         group!="STC Trades",
+         drname=="Lower Mainland Southwest")
+plot_casts(lml_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
     labs(title="Lower Mainland Southwest by trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[8]` {data-navmenu="Table of Contents"}
@@ -216,15 +197,14 @@ lml_by_group <- for_plots%>%
 
 ### 
 
-```{r}
-island_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Skilled Trades Certification (STC)",
-         Drname=="Vancouver Island and Coast")
-  plt <- ts_plot(island_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+island_by_group <- fcast_long%>%
+  filter(group!="All groups",
+         group!="STC Trades",
+         drname=="Vancouver Island and Coast")
+  plot_casts(island_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
     labs(title="Vancouver Island and Coast by trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[9]` {data-navmenu="Table of Contents"}
@@ -233,15 +213,14 @@ island_by_group <- for_plots%>%
 
 ### 
 
-```{r}
-south_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Skilled Trades Certification (STC)",
-         Drname=="Southeast")
-  plt <- ts_plot(south_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+south_by_group <- fcast_long%>%
+  filter(group!="All groups",
+         group!="STC Trades",
+         drname=="Southeast")
+  plot_casts(south_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
     labs(title="Southeast by trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[10]` {data-navmenu="Table of Contents"}
@@ -250,57 +229,27 @@ south_by_group <- for_plots%>%
 
 ### 
 
-```{r}
-north_by_group <- for_plots%>%
-  filter(Group!="All groups",
-         Group!="Skilled Trades Certification (STC)",
-         Drname=="North")
-  plt <- ts_plot(north_by_group)+
-    facet_wrap(~fct_reorder(Group, Forecast, .desc = TRUE), scales = "free_y")+
+```{r fig.width=16, fig.height=8}
+north_by_group <- fcast_long%>%
+  filter(group!="All groups",
+         group!="STC Trades",
+         drname=="North")
+  plot_casts(north_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
     labs(title="North by trades groups")
-  ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[11]` {data-navmenu="Table of Contents"}
-
-## Inputs {.sidebar}
-
-### Inputs:
-
-```{r}
-  filter_select(
-    id = "Drname",
-    label = "Choose a Region",
-    sharedData = shared_fcast,
-    group = ~`Drname`,
-    multiple = FALSE
-  )
-
-filter_select(
-    id = "Group",
-    label = "Choose a trades group",
-    sharedData = shared_fcast,
-    group = ~`Group`,
-    multiple = FALSE
-  )
-
-```
-
-```{js, echo=FALSE}
-<!-- Uncomment rest of code block if you want a default filtering (but then you cant download all the data) -->
-<!-- function filter_default(){ -->
-<!--   document.getElementById("Drname").getElementsByClassName("selectized")[0].selectize.setValue("British Columbia", false) -->
-<!--   document.getElementById("Group").getElementsByClassName("selectized")[0].selectize.setValue("All groups", false) -->
-<!-- } -->
-<!-- $(document).ready(filter_default); -->
-```
 
 ## Column
 
 ### Click &darr; to download data
 
 ```{r}
-shared_fcast %>%
+fcast_tbbl %>%
+   mutate(across(`2016:2019 ratio`:`both period ratio`, ~ round(.x, 4)),
+         across(`New Registrations`:employment, ~ round(.x))
+         )|>
   DT::datatable(
     rownames = FALSE,
     escape = FALSE,
