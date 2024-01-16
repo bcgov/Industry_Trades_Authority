@@ -19,7 +19,8 @@ library(here)
 theme_set(theme_grey(base_size = 15))
 #functions--------------
 plot_casts <- function(tbbl){
-    ggplot(tbbl, aes(year, value, group=name, colour=name))+
+    tbbl|>
+    ggplot(aes(year, value, colour=name, linetype=name))+
     annotate(geom = "rect",
              xmin = c(2016, 2021),
              xmax = c(2019, max_year),
@@ -27,12 +28,15 @@ plot_casts <- function(tbbl){
              ymax = +Inf,
              alpha = 0.2) +
     geom_line()+
+    scale_linetype_manual(values = c(rep(1, 3), 2))+
     facet_wrap(~fct_reorder(group, -value), scales = "free")+
     scale_y_continuous(labels = scales::comma)+
     labs(x=NULL, 
          y=NULL,
-         colour=NULL
+         colour="Series",
+         linetype="Series"
     )
+    
 }
 #load dataframes-------------------
 fcast_tbbl <- read_rds(here("processed","fcast_tbbl.RDS"))
@@ -48,6 +52,7 @@ page_titles <- c("Title Page",#replace with your page titles
                  "Methodology",
                  "All groups, British Columbia",
                  "All groups, by region",
+                 "Skilled Trades Certification (STC), BC",
                  "Skilled Trades Certification (STC), by region",
                  "British Columbia, by group",
                  "Lower Mainland Southwest",
@@ -152,6 +157,21 @@ plot_casts(by_region)+
 ```{r fig.width=16, fig.height=8}
 by_region <- fcast_long%>%
   filter(group=="STC Trades",
+         drname=="British Columbia")
+plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
+    labs(title="Skilled Trades Certification (STC), BC")
+```
+
+# `r page_titles[6]` {data-navmenu="Table of Contents"}
+
+## Column
+
+### 
+
+```{r fig.width=16, fig.height=8}
+by_region <- fcast_long%>%
+  filter(group=="STC Trades",
          drname!="British Columbia")
 plot_casts(by_region)+
     facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
@@ -159,7 +179,7 @@ plot_casts(by_region)+
 ```
 
 
-# `r page_titles[6]` {data-navmenu="Table of Contents"}
+# `r page_titles[7]` {data-navmenu="Table of Contents"}
 
 ## Column
 
@@ -175,7 +195,7 @@ plot_casts(bc_by_group)+
     labs(title="British Columbia by trades groups")
 ```
 
-# `r page_titles[7]` {data-navmenu="Table of Contents"}
+# `r page_titles[8]` {data-navmenu="Table of Contents"}
 
 ## Column
 
@@ -191,7 +211,7 @@ plot_casts(lml_by_group)+
     labs(title="Lower Mainland Southwest by trades groups")
 ```
 
-# `r page_titles[8]` {data-navmenu="Table of Contents"}
+# `r page_titles[9]` {data-navmenu="Table of Contents"}
 
 ## Column
 
@@ -207,7 +227,7 @@ island_by_group <- fcast_long%>%
     labs(title="Vancouver Island and Coast by trades groups")
 ```
 
-# `r page_titles[9]` {data-navmenu="Table of Contents"}
+# `r page_titles[10]` {data-navmenu="Table of Contents"}
 
 ## Column
 
@@ -223,7 +243,7 @@ south_by_group <- fcast_long%>%
     labs(title="Southeast by trades groups")
 ```
 
-# `r page_titles[10]` {data-navmenu="Table of Contents"}
+# `r page_titles[11]` {data-navmenu="Table of Contents"}
 
 ## Column
 
@@ -239,7 +259,7 @@ north_by_group <- fcast_long%>%
     labs(title="North by trades groups")
 ```
 
-# `r page_titles[11]` {data-navmenu="Table of Contents"}
+# `r page_titles[12]` {data-navmenu="Table of Contents"}
 
 ## Column
 

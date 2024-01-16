@@ -101,10 +101,10 @@ get_growth <- function(tbbl, period, n){
 fcast_growth <- function(tbbl, plus, minus){
   p <- tbbl%>%
     filter(year==plus)%>%
-    pull(forecast)
+    pull(value)
   m <- tbbl%>%
     filter(year==minus)%>%
-    pull(forecast)
+    pull(value)
   (p/m)^(1/(plus-minus))-1
 }
 

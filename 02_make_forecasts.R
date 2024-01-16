@@ -53,7 +53,6 @@ mapping <- new_reg|>
   select(-name)|>
   na.omit()
 
-
 #LFS data
 
 lfs <- vroom::vroom(here("current_data","lfs",list.files(here("current_data","lfs"))))|>
@@ -139,10 +138,12 @@ full_years <- ftg_and_stc%>%
 partial_scaled_up <- ftg_and_stc%>%
   filter(year==max_year)%>%
   mutate(year=as.character(year))%>% #necessary for join below
-  mutate(new_reg=(new_reg/length(ytd))*12)
+  mutate(new_reg=(new_reg/length(ytd))*12)  #scale up potentially incomplete last year.
 
-with_inflated <- bind_rows(full_years, partial_scaled_up)
-
+with_inflated <- bind_rows(full_years, partial_scaled_up)|>
+  pivot_wider(names_from = group, values_from = new_reg)|> #convert implicit missing to explicit missing
+  mutate(across(everything(), ~replace_na(.x, 0)))|> #convert explicit missing to 0s
+  pivot_longer(cols=-c(year, drname), names_to = "group", values_to = "new_reg")
 
 # aggregate employment by year, region, and group-----------
 
@@ -183,7 +184,6 @@ not_by_period <- for_props%>%
 
 prop_reg_utilized <- bind_rows(by_period, not_by_period)|>
   pivot_wider(names_from = based_on, values_from = prop_reg_utilized)
-
 
 fcast_tbbl <- full_join(reg_and_employment, prop_reg_utilized)|>
   mutate(`based on 2016:2019 ratio`=round(employment*`2016:2019 ratio`),

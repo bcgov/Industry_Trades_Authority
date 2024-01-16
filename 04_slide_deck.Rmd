@@ -40,6 +40,27 @@ library(grid)
 library(tidyquant)
 add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
+plot_casts <- function(tbbl){
+    tbbl|>
+    ggplot(aes(year, value, colour=name, linetype=name))+
+    annotate(geom = "rect",
+             xmin = c(2016, 2021),
+             xmax = c(2019, max_year),
+             ymin = -Inf,
+             ymax = +Inf,
+             alpha = 0.2) +
+    geom_line()+
+    scale_linetype_manual(values = c(rep(1, 3), 2))+
+    facet_wrap(~fct_reorder(group, -value), scales = "free")+
+    scale_y_continuous(labels = scales::comma)+
+    labs(x=NULL, 
+         y=NULL,
+         colour="Series",
+         linetype="Series"
+    )
+    
+}
+
 theme_set(theme_grey(base_size = 15))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))
 new_reg <- read_clean_join("New")
@@ -59,8 +80,9 @@ new_reg_total <- new_reg%>%
   just_aggregate()%>%
   fix_dates()
 max_date <- yearmonth(max(new_reg_total$date))
+max_year <- year(max_date)
 stc_new_reg <- new_reg%>%
-  filter_and_aggregate(stc, "equal", "First Ten MC Trades")%>%
+  filter_and_aggregate(stc, "equal", "STC Trades")%>%
   fix_dates()
 cofq <- read_clean_join("CofQ")
 cofq_total <- cofq%>%
@@ -71,15 +93,16 @@ cofq_app <- cofq_total%>%
 cofq_chal <- cofq_total%>%
   filter(program_type=="Challenge")
 
-bc_fcast <- read_rds(here("temp","for_plots.rds"))%>%
+bc_fcast <- read_rds(here("processed","fcast_long.RDS"))|>
   filter(drname=="British Columbia")%>%
   wrapR::camel_to_title()
-rect_df <- tibble(xmin=year(ym(max_date)+months(1)), xmax=max(bc_fcast$year)) #for shaded rectangle denoting forecast
+
 
 forecast_growth <- bc_fcast%>%
-  filter(group=="All Groups")%>%
+  filter(group=="All Groups", 
+         name=="Based On Both Periods"
+         )%>%
   fcast_growth(year(today()+months(add_months)), year(today()-months(12-add_months)))
-
 ```
 
 ## Highlights
@@ -91,14 +114,14 @@ forecast_growth <- bc_fcast%>%
   - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_chal, years, 1))` for Trade Qualifiers.
 
 - Forecast for next year:
-  - New apprenticeship registrations in `r year(today()+months(add_months))` are forecast to be `r describe_change(forecast_growth)`  than in `r year(today()-months(12-add_months))`.
+  - Relative to last year, new apprenticeship registrations in `r year(today()+months(add_months))` are forecast to be `r describe_change(forecast_growth)`.
 
 ## New Apprentice Registrations: [Total*](#Total)
 ::: columns 
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Spike in March might have been outlier.} 
+### \textcolor{bcblue}{Strong growth post COVID.} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
 decomp_plot(new_reg_total)
 ```
@@ -114,7 +137,7 @@ decomp_plot(new_reg_total)
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Spike in March might have been outlier.} 
+### \textcolor{bcblue}{Strong growth post COVID.} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
   decomp_plot(stc_new_reg)
 ```
@@ -183,20 +206,23 @@ decomp_plot(cofq_chal)
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot(bc_fcast, "All Groups")
+bc_fcast|>
+  filter(group=="All Groups")|>
+  plot_casts()
 
-get_fcast <- function(grp, yr){
+get_fcast <- function(grp, yr, nm){
   bc_fcast%>%
     filter(year==yr, 
-           group==grp)%>%
-    pull(forecast)
+           group==grp,
+           name==nm)%>%
+    pull(value)
 }
 
 get_cagr <- function(grp){
   current_year <- year(today())
   future_year <- max(bc_fcast$year)
-  current_forecast <- get_fcast(grp, current_year)
-  future_forecast <- get_fcast(grp, future_year)
+  current_forecast <- get_fcast(grp, current_year, "Based On Both Periods")
+  future_forecast <- get_fcast(grp, future_year, "Based On Both Periods")
   scales::percent((future_forecast/current_forecast)^(1/(future_year-current_year))-1, accuracy = .1)  
 }
 
@@ -204,7 +230,7 @@ get_cagr <- function(grp){
 ::::
 ::::  {.column width=.35}
 - Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
-- In `r year(today())` new registrations are forecast to be `r get_fcast("All Groups", year(today()))%>%scales::comma()`.
+- In `r year(today())` new registrations are forecast to be `r get_fcast("All Groups", year(today()), "Based On Both Periods")%>%scales::comma()`.
 - The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("All Groups")`
 ::::
 :::
@@ -217,13 +243,15 @@ get_cagr <- function(grp){
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot(bc_fcast, "Skilled Trades Certification (Stc)")
+ bc_fcast|>
+  filter(group=="Stc Trades")|>
+  plot_casts()
 ```
 ::::
 ::::  {.column width=.35}
 - Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
-- In `r year(today())` new registrations are forecast to be `r get_fcast("Skilled Trades Certification (Stc)", year(today()))%>%scales::comma()`.
-- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Skilled Trades Certification (Stc)")`
+- In `r year(today())` new registrations are forecast to be `r get_fcast("Stc Trades", year(today()), "Based On Both Periods")%>%scales::comma()`.
+- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Stc Trades")`
 ::::
 :::
 
@@ -234,12 +262,14 @@ get_cagr <- function(grp){
 :::: {.column width=.6}
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-  forecast_plot(bc_fcast, "Structural Building Trades")
+ bc_fcast|>
+  filter(group=="Structural Building Trades")|>
+  plot_casts()
 ```
 ::::
 ::::  {.column width=.35}
 - Forecast new registrations are assumed to be a stable proportion of the Labour Market Outlook employment.
-- In `r year(today())` new registrations are forecast to be `r get_fcast("Structural Building Trades", year(today()))%>%scales::comma()`.
+- In `r year(today())` new registrations are forecast to be `r get_fcast("Structural Building Trades", year(today()),"Based On Both Periods")%>%scales::comma()`.
 - The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Structural Building Trades")`
 ::::
 :::
@@ -281,8 +311,8 @@ get_cagr <- function(grp){
 
 ```{r}
 stc <- mapping%>%
-  filter(stc=="First Ten MC Trades")%>%
-  select(noc_code, description)
+  filter(stc=="STC Trades")%>%
+  select(noc_code, Description)
 colnames(stc) <- c("NOC Code", "Description")
 kable(stc, booktabs = T)%>%
   kable_styling(latex_options = "striped")
@@ -305,7 +335,7 @@ kable(ftg, booktabs = T)%>%
 ```{r}
 sbt <- new_reg%>%
   filter(functional_trades_group=="Structural Building Trades")%>%
-  select(noc_code, description)%>%
+  select(noc_code, Description)%>%
   distinct()%>%
   na.omit()
 colnames(sbt) <- c("NOC Code", "Description")
@@ -318,7 +348,7 @@ kable(sbt, booktabs = T)%>%
 ```{r, message=FALSE}
 all_trades <- new_reg%>%
   filter(trades=="Trades")%>%
-  select(noc_code, description)%>%
+  select(noc_code, Description)%>%
   distinct()
 
 first <- head(all_trades, n=ceiling(nrow(all_trades)/2))
