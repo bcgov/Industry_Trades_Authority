@@ -45,7 +45,7 @@ plot_casts <- function(tbbl){
     ggplot(aes(year, value, colour=name, linetype=name))+
     annotate(geom = "rect",
              xmin = c(2016, 2021),
-             xmax = c(2019, max_year),
+             xmax = c(2019, 2023),
              ymin = -Inf,
              ymax = +Inf,
              alpha = 0.2) +

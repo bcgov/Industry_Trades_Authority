@@ -121,6 +121,7 @@ active_nested <- active %>%
   pivot_wider(names_from = thing, values_from = value)
 # save active----------------
 write_rds(active_nested, here::here("temp", "active_nested.rds"))
+
 active_wb <- createWorkbook()
 active_nested %>%
   mutate(
@@ -130,7 +131,7 @@ active_nested %>%
     walk2(plot, category, add_plot, wb = active_wb)
   )
 noc_list %>%
-  mutate(walk2(name, value, writeDataTable, wb = active_wb, startRow = 19))
+  mutate(walk2(name, value, writeDataTable, wb = active_wb, startRow = 25))
 saveWorkbook(active_wb, here("out", "current_output", str_replace_all(paste0("active_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 # cofq--------------------
 cofq_nested <- cofq %>%
@@ -158,6 +159,7 @@ cofq_nested <- cofq %>%
   pivot_wider(names_from = thing, values_from = value)
 # save cofq------------------------
 write_rds(cofq_nested, here::here("temp", "cofq_nested.rds"))
+
 cofq_wb <- createWorkbook()
 cofq_nested %>%
   mutate(
@@ -167,9 +169,9 @@ cofq_nested %>%
     walk2(plot, category, add_plot, wb = cofq_wb)
   )
 noc_list %>%
-  mutate(walk2(name, value, writeDataTable, wb = cofq_wb, startRow = 19))
-saveWorkbook(cofq_wb, here("out", "current_output", str_replace_all(paste0("cofq_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
+  mutate(walk2(name, value, writeDataTable, wb = cofq_wb, startRow = 25))
 
+saveWorkbook(cofq_wb, here("out", "current_output", str_replace_all(paste0("cofq_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 
 
 # new reg--------------
@@ -205,10 +207,10 @@ new_reg_nested %>%
   )
 noc_list %>%
   filter(name != "non_construction_trades") %>%
-  mutate(walk2(name, value, writeDataTable, wb = new_reg_wb, startRow = 19))
+  mutate(walk2(name, value, writeDataTable, wb = new_reg_wb, startRow = 25))
 non_construction_df <- noc_list %>%
   filter(name == "non_construction_trades") %>%
   pull(value)
-writeDataTable(wb = new_reg_wb, sheet = "construction_trades", x = non_construction_df[[1]], startRow = 60)
+writeDataTable(wb = new_reg_wb, sheet = "construction_trades", x = non_construction_df[[1]], startRow = 65)
 saveWorkbook(new_reg_wb, here("out", "current_output", str_replace_all(paste0("new_reg_",lubridate::today(),".xlsx")," ","_")), overwrite = TRUE)
 

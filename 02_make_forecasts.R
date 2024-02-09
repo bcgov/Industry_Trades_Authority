@@ -131,16 +131,23 @@ stc_bc <- new_reg%>%
 
 ftg_and_stc <- bind_rows(ftg, ftg_group, ftg_bc, ftg_everything, stc, stc_bc)
 
-full_years <- ftg_and_stc%>%
-  filter(year<max_year)%>%
-  mutate(year=as.character(year)) #necessary for join below
+if(ytd<12){
+  full_years <- ftg_and_stc%>%
+    filter(year<max_year)%>%
+    mutate(year=as.character(year)) #necessary for join below
+}else{
+  full_years <-ftg_and_stc%>%
+    mutate(year=as.character(year)) #necessary for join below
+}
 
+#use the partial year of data to adjust forecast
 partial_scaled_up <- ftg_and_stc%>%
   filter(year==max_year)%>%
   mutate(year=as.character(year))%>% #necessary for join below
-  mutate(new_reg=(new_reg/length(ytd))*12)  #scale up potentially incomplete last year.
+  mutate(scaled_up=(new_reg/length(ytd))*12)|>  #scale up potentially incomplete last year.
+  select(-new_reg)
 
-with_inflated <- bind_rows(full_years, partial_scaled_up)|>
+no_nas <- full_years|>
   pivot_wider(names_from = group, values_from = new_reg)|> #convert implicit missing to explicit missing
   mutate(across(everything(), ~replace_na(.x, 0)))|> #convert explicit missing to 0s
   pivot_longer(cols=-c(year, drname), names_to = "group", values_to = "new_reg")
@@ -162,7 +169,7 @@ lmo_all_groups <- employment%>%
 
 lmo_employment <- bind_rows(lmo_emp_disagg, lmo_all_groups)
 
-reg_and_employment <- full_join(with_inflated, lmo_employment)|>
+reg_and_employment <- full_join(no_nas, lmo_employment)|>
   filter(drname!="NULL")|>
   ungroup()|>
   arrange(year, group, drname)
@@ -186,9 +193,19 @@ prop_reg_utilized <- bind_rows(by_period, not_by_period)|>
   pivot_wider(names_from = based_on, values_from = prop_reg_utilized)
 
 fcast_tbbl <- full_join(reg_and_employment, prop_reg_utilized)|>
-  mutate(`based on 2016:2019 ratio`=round(employment*`2016:2019 ratio`),
-         `based on 2021:2023 ratio`=round(employment*`2021:2023 ratio`),
-         `based on both periods`=round(employment*`both period ratio`)
+  full_join(partial_scaled_up)|>
+  mutate(`based on 2016:2019 ratio`=employment*`2016:2019 ratio`,
+         `based on 2021:2023 ratio`=employment*`2021:2023 ratio`,
+         `based on both periods`=employment*`both period ratio`,
+         `based on 2016:2019 ratio`=if_else(is.na(scaled_up),
+                                            round(`based on 2016:2019 ratio`),
+                                            round(f_weight*scaled_up+(1-f_weight)*`based on 2016:2019 ratio`)),
+         `based on 2021:2023 ratio`=if_else(is.na(scaled_up),
+                                            round(`based on 2021:2023 ratio`),
+                                            round(f_weight*scaled_up+(1-f_weight)*`based on 2021:2023 ratio`)),
+         `based on both periods`=if_else(is.na(scaled_up),
+                                            round(`based on both periods`),
+                                            round(f_weight*scaled_up+(1-f_weight)*`based on both periods`))
          )|>
   rename(`New Registrations`=new_reg)|>
   arrange(drname, group)
