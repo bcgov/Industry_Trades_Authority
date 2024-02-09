@@ -9,6 +9,7 @@ header-includes:
 - \usepackage{colortbl}
 - \usepackage{makecell}
 - \usepackage{xcolor}
+- \usepackage{longtable}
 - \definecolor{bcblue}{HTML}{1f4181}
 - \definecolor{bcyellow}{HTML}{ffba2a}
 - \setbeamercolor*{palette primary}{use=structure,fg=white,bg=bcblue}
