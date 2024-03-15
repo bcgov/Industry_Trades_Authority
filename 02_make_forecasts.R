@@ -131,7 +131,7 @@ stc_bc <- new_reg%>%
 
 ftg_and_stc <- bind_rows(ftg, ftg_group, ftg_bc, ftg_everything, stc, stc_bc)
 
-if(ytd<12){
+if(max(ytd)<12){
   full_years <- ftg_and_stc%>%
     filter(year<max_year)%>%
     mutate(year=as.character(year)) #necessary for join below
@@ -233,7 +233,7 @@ pop <- cansim::get_cansim("17-10-0005-01")%>%
                           "45 to 49 years",
                           "50 to 54 years",
                           "55 to 59 years"),
-         sex=="Both sexes"
+         gender=="Total - gender"
   )%>%
   mutate(year=lubridate::year(date),
          age_group=str_sub(age_group, end=-7)
