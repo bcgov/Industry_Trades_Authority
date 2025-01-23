@@ -39,7 +39,8 @@ just_aggregate <- function(tbbl, grp = NULL) {
     group_by({{ grp }}, month, year) %>%
     summarize(count = sum(count)) %>%
     mutate(group = "total") %>%
-    na.omit()
+    na.omit()%>%
+    arrange(year)
 }
 
 make_plt <- function(tbbl, label = NULL, smooth = TRUE, title=NULL) {
@@ -78,7 +79,7 @@ filter_and_select <- function(tbbl, var, value) {
 
 add_plot <- function(plt, sheet, wb) {
   print(plt)
-  insertPlot(wb = wb, sheet = sheet, startCol = 10, startRow = 19)
+  insertPlot(wb = wb, sheet = sheet, startCol = 10, startRow = 25)
 }
 
 addsheet <- function(sheetname, wb) {
