@@ -46,7 +46,7 @@ plot_casts <- function(tbbl){
     ggplot(aes(year, value, colour=name, linetype=name))+
     annotate(geom = "rect",
              xmin = c(2016, 2021),
-             xmax = c(2019, 2023),
+             xmax = c(2019, 2024),
              ymin = -Inf,
              ymax = +Inf,
              alpha = 0.2) +
@@ -96,7 +96,7 @@ cofq_chal <- cofq_total%>%
 
 bc_fcast <- read_rds(here("processed","fcast_long.RDS"))|>
   filter(drname=="British Columbia")%>%
-  wrapR::camel_to_title()
+  camel_to_title()
 
 
 forecast_growth <- bc_fcast%>%
@@ -313,7 +313,7 @@ get_cagr <- function(grp){
 ```{r}
 stc <- mapping%>%
   filter(stc=="STC Trades")%>%
-  select(noc_code, Description)
+  select(noc_code, description)
 colnames(stc) <- c("NOC Code", "Description")
 kable(stc, booktabs = T)%>%
   kable_styling(latex_options = "striped")
@@ -326,7 +326,7 @@ ftg <- new_reg%>%
   select(functional_trades_group)%>%
   distinct()%>%
   na.omit()
-colnames(ftg) <- wrapR::make_title(colnames(ftg))
+colnames(ftg) <- make_title(colnames(ftg))
 kable(ftg, booktabs = T)%>%
   kable_styling(latex_options = "striped")
 ```
@@ -336,7 +336,7 @@ kable(ftg, booktabs = T)%>%
 ```{r}
 sbt <- new_reg%>%
   filter(functional_trades_group=="Structural Building Trades")%>%
-  select(noc_code, Description)%>%
+  select(noc_code, description)%>%
   distinct()%>%
   na.omit()
 colnames(sbt) <- c("NOC Code", "Description")
@@ -349,7 +349,7 @@ kable(sbt, booktabs = T)%>%
 ```{r, message=FALSE}
 all_trades <- new_reg%>%
   filter(trades=="Trades")%>%
-  select(noc_code, Description)%>%
+  select(noc_code, description)%>%
   distinct()
 
 first <- head(all_trades, n=ceiling(nrow(all_trades)/2))

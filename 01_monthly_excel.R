@@ -13,7 +13,7 @@
 #' NOTE THAT COLUMN NAMES CHANGE IN OCCUPATIONAL CHARACTERISTICS FILE, AND THE lmo_edition NEEDS TO BE CHANGED YEARLY
 
 #constants-----------------
-lmo_edition <- 2023
+lmo_edition <- 2024
 plus_five <- lmo_edition+5
 plus_ten <- lmo_edition+10
 
@@ -30,12 +30,16 @@ conflicts_prefer(dplyr::filter)
 source(here("R", "functions.R"))
 # read in the data----------------
 
-occ_char <- read_excel(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "Occupational Characteristics")))|>
-  mutate(noc_code=str_sub(NOC, start=2), .after=NOC)|>
+occ_char <- read_excel(here("current_data",
+                            "lmo",
+                            list.files(here("current_data", "lmo"),
+                                       pattern = "Occupational Characteristics")), skip=3)|>
+  clean_names()|>
+  mutate(noc_code=str_sub(noc, start=2), .after=noc)|>
   rename(
-    construction_trades = `Occ Group: Construction Trades`, #WATCH OUT FOR POSSIBLE NAME CHANGE
-    trades = `Occ Group: Trades`, #WATCH OUT FOR POSSIBLE NAME CHANGE
-    stc = `Occ Group: Skilled Trades Certification` #WATCH OUT FOR POSSIBLE NAME CHANGE
+    construction_trades = occ_group_construction_trades, #WATCH OUT FOR POSSIBLE NAME CHANGE
+    trades = occ_group_trades, #WATCH OUT FOR POSSIBLE NAME CHANGE
+    stc =  occ_group_skilled_trades_certification #WATCH OUT FOR POSSIBLE NAME CHANGE
   )|>
   mutate(non_construction_trades=if_else(
     construction_trades=="Non-Construction Trades" &
@@ -47,11 +51,11 @@ occ_char <- read_excel(here("current_data", "lmo", list.files(here("current_data
 noc_list <- occ_char %>%
   select(
     noc_code,
-    Description,
-    ten_year_jo=`LMO Job Openings 2023-2033`, #NAMES CHANGE YEARLY
-    emp_now = `LMO Employment 2023`, #NAMES CHANGE YEARLY
-    emp_five = `LMO Employment 2028`, #NAMES CHANGE YEARLY
-    emp_ten = `LMO Employment 2033`, #NAMES CHANGE YEARLY
+    description,
+    ten_year_jo=paste0("lmo_job_openings_", lmo_edition, "_", plus_ten), #NAMES CHANGE YEARLY
+    emp_now = paste0("lmo_employment_",lmo_edition), #NAMES CHANGE YEARLY
+    emp_five = paste0("lmo_employment_", plus_five), #NAMES CHANGE YEARLY
+    emp_ten = paste0("lmo_employment_", plus_ten), #NAMES CHANGE YEARLY
     non_construction_trades,
     construction_trades,
     trades,
@@ -74,7 +78,7 @@ noc_list <- occ_char %>%
 mapping <- occ_char %>%
   select(
     noc_code,
-    Description,
+    description,
     construction_trades,
     non_construction_trades,
     trades,

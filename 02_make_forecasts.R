@@ -32,12 +32,12 @@ new_reg <- read_xlsx(here("current_data",
     month = contains("month")
   )%>%
   mutate(short_month=as.numeric(str_sub(month,1, 2)),
-         date=lubridate::ym(paste(year, short_month, sep="-")), .after=month)%>%
-  mutate(drname=fct_collapse(drname,
-                             `Vancouver Island and Coast`="Vancouver Island and Coast",
-                             `Lower Mainland Southwest`= "Lower Mainland--Southwest",
-                             Southeast=c("Thompson-Okanagan", "Kootenay"),
-                             North=c("North Coast","Nechako","Northeast", "Cariboo")))
+         date=lubridate::ym(paste(year, short_month, sep="-")), .after=month,
+         drname=if_else(drname=="Lower Mainland--Southwest", "Mainland South West",drname),
+         drname=if_else(drname=="Vancouver Island and Coast", "Vancouver Island Coast",drname),
+         drname=if_else(drname %in% c("North Coast", "Nechako", "Northeast", "Cariboo"), "North", drname),
+         drname=if_else(drname %in% c("Kootenay", "Thompson-Okanagan"), "Southeast", drname)
+  )
 
 ltm <- lubridate::month(max(new_reg$date)-months(0:2)) #the last three months of data
 ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
@@ -60,33 +60,30 @@ lfs <- vroom::vroom(here("current_data","lfs",list.files(here("current_data","lf
   mutate(ertab=if_else(is.na(ertab),59, ertab))|>
   na.omit()|>
   filter(lf_stat=="Employed",
-         noc_5!="missi")|>
+         noc_5!="missi",
+         syear <max_year)|>
   mutate(year=as.character(syear),
          geographic_area=case_when(ertab==59~"British Columbia",
-                                   ertab==5910~"Vancouver Island and Coast",
-                                   ertab==5920~"Lower Mainland Southwest",
+                                   ertab==5910~"Vancouver Island Coast",
+                                   ertab==5920~"Mainland South West",
                                    ertab %in% c(5930, 5940)~"Southeast",
                                    ertab %in% c(5950, 5960, 5970, 5980)~"North"),
          count=count/12)|>
-  select(noc=noc_5, geographic_area, year, count)
+  select(noc=noc_5, geographic_area, year, count)|>
+  group_by(noc, geographic_area, year)|>
+  summarize(count=sum(count, na.rm=TRUE))
 
 #LMO data
-lmo <- read_excel(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 3)%>%
-  pivot_longer(cols=-c(NOC, Description, Industry, Variable,`Geographic Area`), names_to="year", values_to = "count")%>%
+lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 3)%>%
+  pivot_longer(cols=starts_with("2"), names_to="year", values_to = "count")%>%
   clean_names()%>%
   mutate(noc=str_sub(noc, start=2))|>
-  select(noc, geographic_area, year, count)%>%
-  mutate(geographic_area=fct_recode(geographic_area,
-                                    `Vancouver Island and Coast`="Vancouver Island Coast",
-                                    `Lower Mainland Southwest`= "Mainland South West",
-                                    `Southeast`="South East"),
-         geographic_area=as.character(geographic_area)
-  )%>%
-  filter(geographic_area %in% c("British Columbia",
-                                "Vancouver Island and Coast",
-                                "Lower Mainland Southwest",
-                                "Southeast",
-                                "North"))
+  select(noc, geographic_area, year, count)|>
+  mutate(geographic_area=if_else(geographic_area %in% c("Kootenay", "Thompson Okanagan"), "Southeast", geographic_area),
+         geographic_area=if_else(geographic_area %in% c("Cariboo","North Coast & Nechako","North East"), "North", geographic_area)
+         )|>
+  group_by(noc, geographic_area, year)|>
+  summarize(count=sum(count, na.rm = TRUE))
 
 employment <- bind_rows(lmo, lfs)|>
   mutate(noc=paste0("#",noc))|>
@@ -177,8 +174,8 @@ reg_and_employment <- full_join(no_nas, lmo_employment)|>
 ################################
 
 for_props <- reg_and_employment%>%
-  filter(year %in% c(2016:2019, 2021:2023))|>
-  mutate(based_on=if_else(year<2020, "2016:2019 ratio", "2021:2023 ratio"))
+  filter(year %in% c(2016:2019, 2021:2024))|>
+  mutate(based_on=if_else(year<2020, "2016:2019 ratio", "2021:2024 ratio"))
 
 by_period <- for_props%>%
   group_by(drname, group, based_on)%>%
@@ -195,14 +192,14 @@ prop_reg_utilized <- bind_rows(by_period, not_by_period)|>
 fcast_tbbl <- full_join(reg_and_employment, prop_reg_utilized)|>
   full_join(partial_scaled_up)|>
   mutate(`based on 2016:2019 ratio`=employment*`2016:2019 ratio`,
-         `based on 2021:2023 ratio`=employment*`2021:2023 ratio`,
+         `based on 2021:2024 ratio`=employment*`2021:2024 ratio`,
          `based on both periods`=employment*`both period ratio`,
          `based on 2016:2019 ratio`=if_else(is.na(scaled_up),
                                             round(`based on 2016:2019 ratio`),
                                             round(f_weight*scaled_up+(1-f_weight)*`based on 2016:2019 ratio`)),
-         `based on 2021:2023 ratio`=if_else(is.na(scaled_up),
-                                            round(`based on 2021:2023 ratio`),
-                                            round(f_weight*scaled_up+(1-f_weight)*`based on 2021:2023 ratio`)),
+         `based on 2021:2024 ratio`=if_else(is.na(scaled_up),
+                                            round(`based on 2021:2024 ratio`),
+                                            round(f_weight*scaled_up+(1-f_weight)*`based on 2021:2024 ratio`)),
          `based on both periods`=if_else(is.na(scaled_up),
                                             round(`based on both periods`),
                                             round(f_weight*scaled_up+(1-f_weight)*`based on both periods`))

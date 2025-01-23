@@ -59,17 +59,43 @@ make_plt <- function(tbbl, label = NULL, smooth = TRUE, title=NULL) {
       geom_line(alpha = .5) +
       geom_smooth(se = FALSE)
   }
-  wrapR::fix_labs(gg)
+  fix_labs(gg)
 }
+
+fix_labs <- function(gg){
+  gg <- gg+
+    ggplot2::labs(title=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$title), "_", " ")),
+                  x=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$x), "_", " ")),
+                  y=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$y), "_", " ")),
+                  colour=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$colour), "_", " ")),
+                  fill=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$fill), "_", " ")),
+                  edge_colour=stringr::str_to_title(stringr::str_replace_all(as.character(gg$labels$edge_colour), "_", " ")))
+  return(gg)
+}
+
+
 
 wider_with_totals <- function(tbbl) {
   temp <- tbbl %>%
     pivot_wider(names_from = month, values_from = count) %>%
     mutate(year = as.character(year))|>
     adorn_totals(c("row", "col"))
-  colnames(temp) <- wrapR::make_title(colnames(temp))
+  colnames(temp) <- make_title(colnames(temp))
   return(temp)
 }
+
+make_title <- function(strng){
+  strng <- str_to_title(str_replace_all(strng,"_"," "))
+}
+
+camel_to_title <- function(tbbl) {
+  tbbl %>%
+    rapply(as.character, classes = "factor", how = "replace") %>%
+    tibble() %>%
+    mutate(across(where(is.character), make_title))
+}
+
+
 
 filter_and_select <- function(tbbl, var, value) {
   tbbl %>%
