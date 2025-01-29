@@ -61,7 +61,8 @@ lfs <- vroom::vroom(here("current_data","lfs",list.files(here("current_data","lf
   na.omit()|>
   filter(lf_stat=="Employed",
          noc_5!="missi",
-         syear <max_year)|>
+         !is.na(noc_5),
+         syear < max_year)|>
   mutate(year=as.character(syear),
          geographic_area=case_when(ertab==59~"British Columbia",
                                    ertab==5910~"Vancouver Island Coast",
@@ -77,6 +78,8 @@ lfs <- vroom::vroom(here("current_data","lfs",list.files(here("current_data","lf
 lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 3)%>%
   pivot_longer(cols=starts_with("2"), names_to="year", values_to = "count")%>%
   clean_names()%>%
+  filter(noc!="#T",
+         industry=="All industries")|>
   mutate(noc=str_sub(noc, start=2))|>
   select(noc, geographic_area, year, count)|>
   mutate(geographic_area=if_else(geographic_area %in% c("Kootenay", "Thompson Okanagan"), "Southeast", geographic_area),
@@ -152,14 +155,12 @@ no_nas <- full_years|>
 # aggregate employment by year, region, and group-----------
 
 lmo_emp_disagg <- employment%>%
-  filter(noc!="T",
-         !is.na(functional_group))%>%
+  filter(!is.na(functional_group))%>%
   group_by(year, drname=geographic_area, group=functional_group)%>%
   summarize(employment=sum(count))
 
 lmo_all_groups <- employment%>%
-  filter(noc!="T",
-         !is.na(functional_group))%>%
+  filter(!is.na(functional_group))%>%
   group_by(year, drname=geographic_area)%>%
   summarize(employment=sum(count))%>%
   mutate(group="All groups")
