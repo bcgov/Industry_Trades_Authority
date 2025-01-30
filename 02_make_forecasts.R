@@ -42,6 +42,7 @@ new_reg <- read_xlsx(here("current_data",
 ltm <- lubridate::month(max(new_reg$date)-months(0:2)) #the last three months of data
 ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
 f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd registrations.
+#f_weight <- 0 #if last year is complete the backcast and forecasts intersect observed new registrations
 max_year <- max(new_reg$year)
 
 mapping <- new_reg|>
@@ -148,9 +149,12 @@ partial_scaled_up <- ftg_and_stc%>%
   select(-new_reg)
 
 no_nas <- full_years|>
-  pivot_wider(names_from = group, values_from = new_reg)|> #convert implicit missing to explicit missing
-  mutate(across(everything(), ~replace_na(.x, 0)))|> #convert explicit missing to 0s
-  pivot_longer(cols=-c(year, drname), names_to = "group", values_to = "new_reg")
+  mutate(year=as.numeric(year))|>
+  tsibble::as_tsibble(key=c(drname, group), index = year)|>
+  tsibble::fill_gaps(.full = TRUE, new_reg=0)|>
+  as_tibble()|>
+  mutate(year=as.character(year))|>
+  arrange(year, drname, group)
 
 # aggregate employment by year, region, and group-----------
 
@@ -213,8 +217,8 @@ fcast_long <- fcast_tbbl|>
   pivot_longer(cols=c(`New Registrations`, contains("based")))|>
   mutate(year=as.numeric(year))
 
-write_rds(fcast_tbbl, here("processed", "fcast_tbbl.RDS"))
-write_rds(fcast_long, here("processed", "fcast_long.RDS"))
+write_rds(fcast_tbbl, here("processed_data", "fcast_tbbl.RDS"))
+write_rds(fcast_long, here("processed_data", "fcast_long.RDS"))
 
 #for slide deck-------------------
 

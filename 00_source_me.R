@@ -29,7 +29,7 @@ if (!dir.exists(file.path("old_data","lmo"))) {dir.create(file.path("old_data","
 if (!dir.exists("out")) {dir.create("out")}
 if (!dir.exists(file.path("out","current_output"))) {dir.create(file.path("out","current_output"))}
 if (!dir.exists(file.path("out","old_output"))) {dir.create(file.path("out","old_output"))}
-if (!dir.exists("temp")) {dir.create("temp")}
+if (!dir.exists("processed_data")) {dir.create("processed_data")}
 
 #are the required files where they are supposed to be?----------------
 assert_that(length(list.files(here("current_data","ita"), pattern="Active"))==1,

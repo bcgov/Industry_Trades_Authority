@@ -39,8 +39,8 @@ plot_casts <- function(tbbl){
     
 }
 #load dataframes-------------------
-fcast_tbbl <- read_rds(here("processed","fcast_tbbl.RDS"))
-fcast_long <- read_rds(here("processed","fcast_long.RDS"))
+fcast_tbbl <- read_rds(here("processed_data","fcast_tbbl.RDS"))
+fcast_long <- read_rds(here("processed_data","fcast_long.RDS"))
 
 max_year <- fcast_tbbl|>
   filter(!is.na(`New Registrations`))|>
@@ -68,7 +68,7 @@ page_titles <- c("Title Page",#replace with your page titles
 
 ## Row {data-height="400"}
 
-```{r, out.width = "150%"}
+```{r, out.width = "100%"}
 knitr::include_graphics("psfs.png")#the cover image
 ```
 

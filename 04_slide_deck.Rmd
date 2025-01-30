@@ -1,6 +1,6 @@
 ---
 title: \textcolor{black}{New Apprenticeship Registrations and Apprenticeship Certifications}
-subtitle: \textcolor{black}{`r paste("for",format(readRDS(here::here("temp","max_date.rds")), format="%B %Y"))`}
+subtitle: \textcolor{black}{`r paste("for",format(readRDS(here::here("processed_data","max_date.rds")), format="%B %Y"))`}
 author: "Labour Market Information Office"
 institute: "Contact: Richard.Martin@gov.bc.ca"
 date: "`r lubridate::today()`"
@@ -94,7 +94,7 @@ cofq_app <- cofq_total%>%
 cofq_chal <- cofq_total%>%
   filter(program_type=="Challenge")
 
-bc_fcast <- read_rds(here("processed","fcast_long.RDS"))|>
+bc_fcast <- read_rds(here("processed_data","fcast_long.RDS"))|>
   filter(drname=="British Columbia")%>%
   camel_to_title()
 

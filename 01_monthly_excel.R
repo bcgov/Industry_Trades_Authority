@@ -96,7 +96,7 @@ new_reg%>%
   mutate(date=lubridate::ym(paste(year,str_sub(month,1,2),sep = "-")))%>%
   summarize(max(date, na.rm=TRUE))%>%
   pull()%>%
-  write_rds(here::here("temp","max_date.rds"))
+  write_rds(here::here("processed_data","max_date.rds"))
 
 
 # active--------------
@@ -124,7 +124,7 @@ active_nested <- active %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
 # save active----------------
-write_rds(active_nested, here::here("temp", "active_nested.rds"))
+write_rds(active_nested, here::here("processed_data", "active_nested.rds"))
 
 active_wb <- createWorkbook()
 active_nested %>%
@@ -162,7 +162,7 @@ cofq_nested <- cofq %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
 # save cofq------------------------
-write_rds(cofq_nested, here::here("temp", "cofq_nested.rds"))
+write_rds(cofq_nested, here::here("processed_data", "cofq_nested.rds"))
 
 cofq_wb <- createWorkbook()
 cofq_nested %>%
@@ -200,7 +200,7 @@ new_reg_nested <- new_reg %>%
   separate(name, into = c("category", "thing"), sep = "__") %>%
   pivot_wider(names_from = thing, values_from = value)
 # save new_reg------------------
-write_rds(new_reg_nested, here::here("temp", "new_reg_nested.rds"))
+write_rds(new_reg_nested, here::here("processed_data", "new_reg_nested.rds"))
 new_reg_wb <- createWorkbook()
 new_reg_nested %>%
   mutate(
