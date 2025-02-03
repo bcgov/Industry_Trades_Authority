@@ -39,28 +39,37 @@ library(kableExtra)
 library(ggfortify)
 library(grid)
 library(tidyquant)
-add_months <- 3 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
+add_months <- 1 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
 plot_casts <- function(tbbl){
-    tbbl|>
-    ggplot(aes(year, value, colour=name, linetype=name))+
-    annotate(geom = "rect",
-             xmin = c(2016, 2021),
-             xmax = c(2019, 2024),
+  ggplot()+
+     annotate(geom = "rect",
+             xmin = 2025,
+             xmax = +Inf,
              ymin = -Inf,
              ymax = +Inf,
              alpha = 0.2) +
-    geom_line()+
-    scale_linetype_manual(values = c(rep(1, 3), 2))+
-    facet_wrap(~fct_reorder(group, -value), scales = "free")+
+    geom_line(data=tbbl|>filter(!name %in% c("New Registrations", "prop_mean")),
+              mapping=aes(year,
+                          value,
+                          group = name),
+              alpha=.1, 
+              colour="red")+
+    geom_line(data=tbbl|>filter(name =="New Registrations"),
+              mapping=aes(year,
+                          value,
+                          group = name))+
+    geom_line(data=tbbl|>filter(name =="prop_mean"),
+              mapping=aes(year,
+                          value,
+                          group = name),
+              colour="red")+
     scale_y_continuous(labels = scales::comma)+
-    labs(x=NULL, 
+    labs(x=NULL,
          y=NULL,
-         colour="Series",
-         linetype="Series"
-    )
-    
+         subtitle="New Registrations in black, prop_xxxx in light red, prop_mean in red.")
 }
+
 
 theme_set(theme_grey(base_size = 15))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))
@@ -95,15 +104,13 @@ cofq_chal <- cofq_total%>%
   filter(program_type=="Challenge")
 
 bc_fcast <- read_rds(here("processed_data","fcast_long.RDS"))|>
-  filter(drname=="British Columbia")%>%
-  camel_to_title()
-
+  filter(drname=="British Columbia")
 
 forecast_growth <- bc_fcast%>%
-  filter(group=="All Groups", 
-         name=="Based On Both Periods"
+  filter(group=="All groups", 
+         name=="prop_mean"
          )%>%
-  fcast_growth(year(today()+months(add_months)), year(today()-months(12-add_months)))
+  fcast_growth(year(today()+month(add_months)), year(today()+month(add_months)+year(1)))
 ```
 
 ## Highlights
@@ -208,7 +215,7 @@ decomp_plot(cofq_chal)
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
 bc_fcast|>
-  filter(group=="All Groups")|>
+  filter(group=="All groups")|>
   plot_casts()
 
 get_fcast <- function(grp, yr, nm){
@@ -245,7 +252,7 @@ get_cagr <- function(grp){
 ### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
  bc_fcast|>
-  filter(group=="Stc Trades")|>
+  filter(group=="STC Trades")|>
   plot_casts()
 ```
 ::::

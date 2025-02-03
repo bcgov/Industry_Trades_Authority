@@ -20,26 +20,40 @@ theme_set(theme_grey(base_size = 15))
 #functions--------------
 plot_casts <- function(tbbl){
   ggplot()+
-     annotate(geom = "rect",
-             xmin = 2025,
-             xmax = +Inf,
-             ymin = -Inf,
-             ymax = +Inf,
-             alpha = 0.2) +
+    geom_vline(xintercept = max_year+1, col="white", lwd=2)+
     geom_line(data=tbbl|>filter(!name %in% c("New Registrations", "prop_mean")),
               mapping=aes(year,
                           value,
-                          group = name),
+                          group = name,
+                          text=paste0(if_else(year<=max_year,"The backcast in ", "The forecast in "),
+                          year,
+                          if_else(year <= max_year, " was ", " is "),
+                          scales::comma(value, accuracy = 1),
+                          " based on ",
+                          str_sub(name, -4),
+                          " proportion.")
+                          ),
               alpha=.1, 
               colour="red")+
     geom_line(data=tbbl|>filter(name =="New Registrations"),
               mapping=aes(year,
                           value,
-                          group = name))+
+                          group = name,
+                          text=paste0("New registrations in ",
+                          year,
+                          " were ",
+                          scales::comma(value))))+
     geom_line(data=tbbl|>filter(name =="prop_mean"),
               mapping=aes(year,
                           value,
-                          group = name),
+                          group = name,
+                          text=paste0(if_else(year<=max_year,"The backcast in ", "The forecast in "),
+                          year, 
+                          if_else(year <= max_year, " was ", " is "),
+                          scales::comma(value, accuracy = 1),
+                          " based on the mean proportion (2016:",
+                          max_year,
+                          ")")),
               colour="red")+
     scale_y_continuous(labels = scales::comma)+
     labs(x=NULL,
@@ -92,7 +106,7 @@ knitr::include_graphics("psfs.png")#the cover image
 
 # `r page_titles[2]` {data-navmenu="Table of Contents"}
 
-## Row  {data-height="700"}
+## Row  {data-height="1000"}
 
 ```{r}
 # for methodology explanation.
@@ -116,33 +130,30 @@ fcast_tbbl%>%
 *  For example, consider the data above (all trades groups for British Columbia).
 *  **New Registrations ** is the aggregate value of new registrations for a given **year**, **drname** and **group**. 
 *  Note that for the (likely incomplete) last year of data, New Registrations is 12 times the year-to-date monthly average.
-*   **employment** is from the LFS up to 2023, and from the LMO forecast for 2024 onwards.
-*   **2016:2019 ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019.
-*   **2021:2024 ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2021, 2022, 2023, 2024.
-*   **both period ratio** is $\frac{\sum \mbox{New Registrations}}{\sum \mbox{employment}}$ for the years 2016, 2017, 2018, 2019, 2021, 2022, 2023, 2024.
+*   **employment** is from the LFS up to `r max_year-1`, and from the LMO forecast for `r max_year` onwards.
+*   **prop_year** : we use the historic relationship between new registrations and employment in the given year, and apply it to future levels of employment.
+*   **prop_mean**: same as above, but proportion is based on all years between 2016 and `r max_year`.
 *   **scaled_up** the monthly average of New Registrations for the current year times 12.
-*   **based on 2016:2019 ratio** is a weighted average of employment times 2016:2019 ratio and scaled_up
-*   **based on 2021:2024 ratio** is a weighted average of employment times 2021:2023 ratio and scaled_up
-*   **based on both periods** is a weighted average of employment times both period ratio and scaled_up
 
 # `r page_titles[3]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[3]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 total <- fcast_long%>%
   filter(drname=="British Columbia",
          group=="All groups")
-plot_casts(total)
+plot_casts(total)|>
+  plotly::ggplotly(tooltip = "text")
 ```
 
 # `r page_titles[4]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[4]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 by_region <- fcast_long%>%
@@ -150,40 +161,43 @@ by_region <- fcast_long%>%
          drname!="British Columbia",
          drname!="NULL")
 
-plot_casts(by_region)+
-    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
-    labs(title="All trades groups by region")
+plt <- plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[5]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[5]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 by_region <- fcast_long%>%
   filter(group=="STC Trades",
          drname=="British Columbia")
-plot_casts(by_region)+
-    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
-    labs(title="Skilled Trades Certification (STC), BC")
+plt <- plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[6]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[6]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 by_region <- fcast_long%>%
   filter(group=="STC Trades",
          drname!="British Columbia",
          drname!="NULL")
-plot_casts(by_region)+
-    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")+
-    labs(title="Skilled Trades Certification (STC), by region")
+plt <- plot_casts(by_region)+
+    facet_wrap(~fct_reorder(drname, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 
@@ -191,80 +205,85 @@ plot_casts(by_region)+
 
 ## Column
 
-### 
+### New registrations for `r page_titles[7]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 bc_by_group <- fcast_long%>%
   filter(group!="All groups",
          group!="STC Trades",
          drname=="British Columbia")
-plot_casts(bc_by_group)+
-    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free")+
-    labs(title="British Columbia by trades groups")
+plt <- plot_casts(bc_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[8]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[8]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 lml_by_group <- fcast_long%>%
   filter(group!="All groups",
          group!="STC Trades",
          drname=="Mainland South West")
-plot_casts(lml_by_group)+
-    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
-    labs(title="Lower Mainland Southwest by trades groups")
+plt <- plot_casts(lml_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[9]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[9]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 island_by_group <- fcast_long%>%
   filter(group!="All groups",
          group!="STC Trades",
          drname=="Vancouver Island Coast")
-  plot_casts(island_by_group)+
-    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
-    labs(title="Vancouver Island and Coast by trades groups")
+plt <-   plot_casts(island_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[10]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[10]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 south_by_group <- fcast_long%>%
   filter(group!="All groups",
          group!="STC Trades",
          drname=="Southeast")
-  plot_casts(south_by_group)+
-    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
-    labs(title="Southeast by trades groups")
+plt <-   plot_casts(south_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[11]` {data-navmenu="Table of Contents"}
 
 ## Column
 
-### 
+### New registrations for `r page_titles[11]` (black) and fore/back-casts (red). 
 
 ```{r fig.width=16, fig.height=8}
 north_by_group <- fcast_long%>%
   filter(group!="All groups",
          group!="STC Trades",
          drname=="North")
-  plot_casts(north_by_group)+
-    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")+
-    labs(title="North by trades groups")
+plt <-   plot_casts(north_by_group)+
+    facet_wrap(~fct_reorder(group, value, .desc = TRUE), scales = "free_y")
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[12]` {data-navmenu="Table of Contents"}
