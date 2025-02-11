@@ -41,35 +41,6 @@ library(grid)
 library(tidyquant)
 add_months <- 1 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
 source(here("R","functions.R"))
-plot_casts <- function(tbbl){
-  ggplot()+
-     annotate(geom = "rect",
-             xmin = 2025,
-             xmax = +Inf,
-             ymin = -Inf,
-             ymax = +Inf,
-             alpha = 0.2) +
-    geom_line(data=tbbl|>filter(!name %in% c("New Registrations", "prop_mean")),
-              mapping=aes(year,
-                          value,
-                          group = name),
-              alpha=.1, 
-              colour="red")+
-    geom_line(data=tbbl|>filter(name =="New Registrations"),
-              mapping=aes(year,
-                          value,
-                          group = name))+
-    geom_line(data=tbbl|>filter(name =="prop_mean"),
-              mapping=aes(year,
-                          value,
-                          group = name),
-              colour="red")+
-    scale_y_continuous(labels = scales::comma)+
-    labs(x=NULL,
-         y=NULL,
-         subtitle="New Registrations in black, fore and back casts in red")
-}
-
 
 theme_set(theme_grey(base_size = 15))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))

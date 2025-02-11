@@ -201,6 +201,116 @@ fix_column_names <- function(tbbl){
       "Growth: {lmo_edition}-{plus_ten}":= ty_cagr)
 }
 
+plot_casts <- function(tbbl){
+  ggplot()+
+    geom_vline(xintercept = max_year, col="white", lwd=2)+
+    geom_line(data=tbbl|>filter(!name %in% c("New Registrations", "prop_mean")),
+              mapping=aes(year,
+                          value,
+                          group = name,
+                          text=paste0(if_else(year<max_year,"The backcast in ", "The forecast in "),
+                                      year,
+                                      if_else(year < max_year, " was ", " is "),
+                                      scales::comma(value, accuracy = 1),
+                                      " based on ",
+                                      str_sub(name, -4),
+                                      " proportion.")
+              ),
+              alpha=.1,
+              colour="red")+
+   geom_line(data=tbbl|>filter(name =="New Registrations"),
+              mapping=aes(year,
+                          value,
+                          group = name,
+                          text= paste0(if_else(year<max_year,"New registrations in ", "12 times the monthly average registrations in "),
+                                       year,
+                                       if_else(year < max_year, " were ", " is "),
+                                       scales::comma(value, accuracy = 1))))+
+    geom_line(data=tbbl|>filter(name =="prop_mean"),
+              mapping=aes(year,
+                          value,
+                          group = name,
+                          text=paste0(if_else(year<max_year,"The backcast in ", "The forecast in "),
+                                      year,
+                                      if_else(year < max_year, " was ", " is "),
+                                      scales::comma(value, accuracy = 1),
+                                      " based on the mean proportion (2016:",
+                                      max_year-1,
+                                      ")")),
+              colour="red")+
+    scale_y_continuous(labels = scales::comma)+
+    labs(x=NULL,
+         y=NULL)
+}
+
+color_duplicate_cells <- function(df, year_col = "year", fs=12) {
+  # Ensure year column exists
+  if (!year_col %in% names(df)) stop("Year column not found in the dataset.")
+
+  # Convert Year column to a character for color mapping
+  unique_years <- unique(df[[year_col]])
+  year_colors <- setNames(viridis(length(unique_years)), unique_years)
+
+  # Function to determine text color based on background luminance
+  get_text_color <- function(bg_color) {
+    rgb_vals <- col2rgb(bg_color) / 255  # Normalize to 0-1 scale
+    luminance <- sum(rgb_vals * c(0.2126, 0.7152, 0.0722))  # Standard luminance formula
+    if (luminance > 0.5) "black" else "white"  # Black text for light backgrounds, white for dark
+  }
+
+  # Select only numeric columns for duplicate detection
+  num_cols <- names(df)[sapply(df, is.numeric) & names(df) != year_col]
+
+  if (length(num_cols) == 0) stop("No numeric columns found for duplicate detection.")
+
+  # Function to check duplicates and assign colors
+  highlight_dupes <- function(row) {
+    row_values <- as.numeric(row[num_cols])  # Extract numeric columns
+    year_value <- as.character(row[[year_col]]) # Get Year column as character
+
+    # Identify duplicate values within the row
+    dupes <- duplicated(row_values) | duplicated(row_values, fromLast = TRUE)
+    row_colors <- rep(NA, length(row_values))  # Default no color
+    text_colors <- rep(NA, length(row_values)) # Default text color
+
+    if (any(dupes)) {
+      bg_color <- year_colors[year_value]  # Get background color from Year
+      text_color <- get_text_color(bg_color)  # Determine appropriate text color
+      row_colors[dupes] <- bg_color
+      text_colors[dupes] <- text_color
+    }
+
+    return(list(bg = row_colors, text = text_colors))
+  }
+
+  # Apply function row-wise
+  highlight_matrices <- apply(df, 1, highlight_dupes)
+  bg_matrix <- t(sapply(highlight_matrices, `[[`, "bg"))
+  text_matrix <- t(sapply(highlight_matrices, `[[`, "text"))
+
+  # Convert to a list for reactable styling
+  style_list <- lapply(seq_along(num_cols), function(i) {
+    function(value, index) {
+      bg_color <- bg_matrix[index, i]
+      text_color <- text_matrix[index, i]
+      if (!is.na(bg_color)) list(background = bg_color, color = text_color) else NULL
+    }
+  })
+
+  # Create reactable output
+  reactable(df, columns = c(
+    setNames(lapply(seq_along(num_cols), function(i) colDef(style = style_list[[i]])), num_cols),
+    setNames(list(colDef(show = TRUE)), year_col) # Ensure Year column is shown
+  ),
+  pagination = FALSE,  # Show all rows without pagination
+  width = "100%",
+  height = "auto",
+  theme = reactableTheme(
+    style = list(fontSize = fs)  # Adjusts font size for the entire table
+  )
+  )
+}
+
 
 
 

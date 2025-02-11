@@ -42,7 +42,7 @@ new_reg <- read_xlsx(here("current_data",
 ltm <- lubridate::month(max(new_reg$date)-months(0:2)) #the last three months of data
 ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
 f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd registrations.
-f_weight <- 0 #if last year is complete the backcast and forecasts intersect observed new registrations
+#f_weight <- 0 #if last year is complete the backcast and forecasts intersect observed new registrations
 max_year <- max(new_reg$year)
 
 mapping <- new_reg|>
@@ -84,7 +84,8 @@ lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", 
   pivot_longer(cols=starts_with("2"), names_to="year", values_to = "count")|>
   clean_names()|>
   filter(noc!="#T",
-         industry=="All industries")|>
+         industry=="All industries",
+         year>=max_year)|>
   mutate(noc=str_sub(noc, start=2))|>
   select(noc, geographic_area, year, count)|>
   mutate(geographic_area=if_else(geographic_area %in% c("Kootenay", "Thompson Okanagan"), "Southeast", geographic_area),
@@ -157,7 +158,8 @@ no_nas <- full_years|>
   tsibble::fill_gaps(.full = TRUE, new_reg=0)|>
   as_tibble()|>
   mutate(year=as.character(year))|>
-  arrange(year, drname, group)
+  arrange(year, drname, group)|>
+  bind_rows(partial_scaled_up|>rename(new_reg=scaled_up))#add in scaled up partial year... could be wrong
 
 # aggregate employment by year, region, and group-----------
 
@@ -185,11 +187,15 @@ reg_and_employment <- full_join(no_nas, employment)|>
 for_props <- reg_and_employment|>
   filter(year %in% c(2016:2024))
 
-prop_reg <- for_props|>
+prop_reg_annual <- for_props|>
   group_by(drname, group, year)|>
-  summarize(annual_prop=sum(new_reg)/sum(employment))|>
+  summarize(annual_prop=sum(new_reg)/sum(employment))
+
+prop_reg_mean <- for_props|>
   group_by(drname, group)|>
-  mutate(prop_mean=mean(annual_prop))
+  summarize(prop_mean=sum(new_reg)/sum(employment))
+
+prop_reg <- full_join(prop_reg_annual, prop_reg_mean)
 
 #take a look at the proportions
 ggplot(prop_reg)+

@@ -12,7 +12,7 @@
 
 #' TO DO:
 #' MAKE SURE THE FILES LMO_occ_char.csv AND lmo_employment ARE UP TO DATE (CHANGE ONCE PER YEAR AFTER LMO RELEASE)
-#' PLACE THE 3 NEW ITA FILES IN current_ita.
+#' PLACE THE 3 NEW ITA FILES IN current_data/ita.
 #' SOURCE THIS FILE.
 #' OUTPUT CAN BE FOUND IN out/current_output
 tictoc::tic()
@@ -47,7 +47,7 @@ filesstrings::file.move(here("out","current_output", list.files(here("out", "cur
                         overwrite = TRUE)
 #create new output
 source("01_monthly_excel.R")
-source("02_make_forecasts.R")
+source("02_make_new_forecasts.R") #changed methodology
 rmarkdown::render("03_forecast_dashboard.Rmd",
                   output_file =  str_replace_all(paste0("ita_forecasts_",lubridate::today(),".html")," ","_"),
                   output_dir = here::here("out","current_output"))
@@ -57,7 +57,7 @@ rmarkdown::render("04_slide_deck.Rmd",
 
 tictoc::toc()
 #archive ita input files--------
-#filesstrings::file.move(here("current_data","ita", list.files(here("current_data", "ita"))), here("old_data", "ita"))
+# filesstrings::file.move(here::here("current_data","ita", list.files(here::here("current_data", "ita"))), here::here("old_data", "ita"))
 
 
 

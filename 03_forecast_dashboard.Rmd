@@ -3,6 +3,7 @@ title: "`r params$doc_title`"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
+    vertical_layout: fill
     css: style.css
     source_code: https://github.com/bcgov/Industry_Trades_Authority
 params:
@@ -16,50 +17,12 @@ library(tidyverse)
 library(DT)
 library(plotly)
 library(here)
+library(reactable)
+library(viridis)
+library(colorspace) # For luminance calculation
 theme_set(theme_grey(base_size = 15))
 #functions--------------
-plot_casts <- function(tbbl){
-  ggplot()+
-    geom_vline(xintercept = max_year+1, col="white", lwd=2)+
-    geom_line(data=tbbl|>filter(!name %in% c("New Registrations", "prop_mean")),
-              mapping=aes(year,
-                          value,
-                          group = name,
-                          text=paste0(if_else(year<=max_year,"The backcast in ", "The forecast in "),
-                          year,
-                          if_else(year <= max_year, " was ", " is "),
-                          scales::comma(value, accuracy = 1),
-                          " based on ",
-                          str_sub(name, -4),
-                          " proportion.")
-                          ),
-              alpha=.1, 
-              colour="red")+
-    geom_line(data=tbbl|>filter(name =="New Registrations"),
-              mapping=aes(year,
-                          value,
-                          group = name,
-                          text=paste0("New registrations in ",
-                          year,
-                          " were ",
-                          scales::comma(value))))+
-    geom_line(data=tbbl|>filter(name =="prop_mean"),
-              mapping=aes(year,
-                          value,
-                          group = name,
-                          text=paste0(if_else(year<=max_year,"The backcast in ", "The forecast in "),
-                          year, 
-                          if_else(year <= max_year, " was ", " is "),
-                          scales::comma(value, accuracy = 1),
-                          " based on the mean proportion (2016:",
-                          max_year,
-                          ")")),
-              colour="red")+
-    scale_y_continuous(labels = scales::comma)+
-    labs(x=NULL,
-         y=NULL)
-}
-
+source(here("R","functions.R"))
 #load dataframes-------------------
 fcast_tbbl <- read_rds(here("processed_data","fcast_tbbl.RDS"))
 fcast_long <- read_rds(here("processed_data","fcast_long.RDS"))
@@ -88,15 +51,9 @@ page_titles <- c("Title Page",#replace with your page titles
 
 # `r page_titles[1]` {data-navmenu="Table of Contents"}
 
-## Row {data-height="400"}
+## Row {.background-banner}
 
-```{r, out.width = "100%"}
-knitr::include_graphics("psfs.png")#the cover image
-```
-
-## Row {data-height="600"}
-
-### 
+<br><br><br><br><br><br><br><br>
 
 <h1 class="center">
 
@@ -106,34 +63,39 @@ knitr::include_graphics("psfs.png")#the cover image
 
 # `r page_titles[2]` {data-navmenu="Table of Contents"}
 
-## Row  {data-height="1000"}
+## Row {data-height="800"}
+
+### Data  
 
 ```{r}
 # for methodology explanation.
-fcast_tbbl%>%
+
+rt <- fcast_tbbl%>%
   filter(drname=="British Columbia",
-         group=="All groups")%>%
-   DT::datatable(
-    rownames = FALSE,
-    escape = FALSE,
-    extensions = c('Buttons', 'FixedColumns'),
-    class = 'cell-border stripe',
-    options = list(
-    dom = 't',
-    scrollX = TRUE))
+         group=="All groups",
+         year<=max_year)%>%
+  select(-drname, -group, -scaled_up)|>
+  relocate(prop_mean, .after = everything())|>
+  mutate(employment=round(employment))
+
+htmltools::div(
+  style = "flex-grow: 1; overflow-y: auto;",
+  color_duplicate_cells(rt)
+)
+
 ```
 
-## Row
+## Row {data-height="400"}
 
 ### Methodology
 
 *  For example, consider the data above (all trades groups for British Columbia).
 *  **New Registrations ** is the aggregate value of new registrations for a given **year**, **drname** and **group**. 
-*  Note that for the (likely incomplete) last year of data, New Registrations is 12 times the year-to-date monthly average.
+*  Note that for the `r max_year` new registrations, the value you see is 12 times the year-to-date monthly average.
 *   **employment** is from the LFS up to `r max_year-1`, and from the LMO forecast for `r max_year` onwards.
-*   **prop_year** : we use the historic relationship between new registrations and employment in the given year, and apply it to future levels of employment.
-*   **prop_mean**: same as above, but proportion is based on all years between 2016 and `r max_year`.
-*   **scaled_up** the monthly average of New Registrations for the current year times 12.
+*   **prop_year** : we use the historic relationship between new registrations and employment in that **year**, and apply it to all the years of LFS (backcasts) and LMO employment (forecasts).
+*   **prop_mean**: same as above, but proportion is the average across all years between 2016 and `r max_year-1`.
+*   The coloured cells indicate matching values of new registrations and backcasts: i.e. if you apply the 2016 proportion to 2016 employment, you recover (perfectly) the observed number of new registrations.
 
 # `r page_titles[3]` {data-navmenu="Table of Contents"}
 
@@ -145,8 +107,9 @@ fcast_tbbl%>%
 total <- fcast_long%>%
   filter(drname=="British Columbia",
          group=="All groups")
-plot_casts(total)|>
-  plotly::ggplotly(tooltip = "text")
+plt <- plot_casts(total)
+
+plotly::ggplotly(plt, tooltip = "text")
 ```
 
 # `r page_titles[4]` {data-navmenu="Table of Contents"}
