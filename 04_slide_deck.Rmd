@@ -208,9 +208,9 @@ get_cagr <- function(grp){
 ```
 ::::
 ::::  {.column width=.35}
-- Fore and back casts are product of historic proportion $\frac{registrations}{employment}$ and employment.
-- Light red lines based on single-year proportions.
-- Dark red line is based on the mean of the single-year proportions. 
+- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
+- Light red lines based on individual year proportions.
+- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
 - In `r year(today())` new registrations are forecast to be `r get_fcast("All groups", year(today()), "prop_mean")%>%scales::comma()`.
 - The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("All groups")`
 ::::
@@ -230,9 +230,9 @@ get_cagr <- function(grp){
 ```
 ::::
 ::::  {.column width=.35}
-- Fore and back casts are product of historic proportion $\frac{registrations}{employment}$ and employment.
-- Light red lines based on single-year proportions.
-- Dark red line is based on the mean of the single-year proportions. 
+- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
+- Light red lines based on individual year proportions.
+- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
 - In `r year(today())` new registrations are forecast to be `r get_fcast("STC Trades", year(today()), "prop_mean")%>%scales::comma()`.
 - The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("STC Trades")`
 ::::
@@ -251,9 +251,9 @@ get_cagr <- function(grp){
 ```
 ::::
 ::::  {.column width=.35}
-- Fore and back casts are product of historic proportion $\frac{registrations}{employment}$ and employment.
-- Light red lines based on single-year proportions.
-- Dark red line is based on the mean of the single-year proportions. 
+- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
+- Light red lines based on individual year proportions.
+- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
 - In `r year(today())` new registrations are forecast to be `r get_fcast("Structural Building Trades", year(today()),"prop_mean")%>%scales::comma()`.
 - The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Structural Building Trades")`
 ::::
@@ -284,8 +284,8 @@ get_cagr <- function(grp){
 ## Appendix 1 {#A1}
 
 - Source Code: [Github](https://github.com/bcgov/Industry_Trades_Authority)
-- New apprenticeship registration forecasts are developed using the ratio of previous registrations to trades employment, which is applied to the forecast of trades employment from the last published edition of the BC Labour Market Outlook (LMO). 
-- The current year forecast is a weighted average of new registrations thus far and the demand driven forecast described above.
+- New registration forecasts are the product of the historic ratio between new registrations and employment and the forecast of trades employment from the last published edition of the BC Labour Market Outlook (LMO). 
+- The current year forecast (`r year(max(new_reg_total$date))`) is a weighted average of new registrations thus far and the demand driven forecast described above.
 - Historical data on New Apprenticeship Registrations and Certificates of Qualification was provided by SkilledTradesBC.
 - Certificates of Qualification can be earned through two pathways: The completion of an apprenticeship program (Apprentice route, called “Apprentices”) or by challenging the certification exam (Challenge route, called “Trade Qualifiers”)
 
