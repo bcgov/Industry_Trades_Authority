@@ -286,7 +286,7 @@ get_cagr <- function(grp){
 - Source Code: [Github](https://github.com/bcgov/Industry_Trades_Authority)
 - New apprenticeship registration forecasts are developed using the ratio of previous registrations to trades employment, which is applied to the forecast of trades employment from the last published edition of the BC Labour Market Outlook (LMO). 
 - The current year forecast is a weighted average of new registrations thus far and the demand driven forecast described above.
-- Historical data on New Apprenticeship Registrations and Certificates of Qualification was provided by the Industry Training Authority (SkilledTradesBC).
+- Historical data on New Apprenticeship Registrations and Certificates of Qualification was provided by SkilledTradesBC.
 - Certificates of Qualification can be earned through two pathways: The completion of an apprenticeship program (Apprentice route, called “Apprentices”) or by challenging the certification exam (Challenge route, called “Trade Qualifiers”)
 
 ## Appendix 2: STC trades {#STC}

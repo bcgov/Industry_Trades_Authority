@@ -7,7 +7,7 @@ output:
     css: style.css
     source_code: https://github.com/bcgov/Industry_Trades_Authority
 params:
-  doc_title: "Forecasts of Industry Trade Authority new apprenticeship registrations"
+  doc_title: "Forecasts of SkilledTradesBC new apprenticeship registrations"
 ---
 
 ```{r}
