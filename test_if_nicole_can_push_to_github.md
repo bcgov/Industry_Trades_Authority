@@ -7,5 +7,5 @@ Hi Nicole, can you correct my speeling mistake, and add a sentence?
 - Add a description of the changes you made in the box to the right then commit > close the box > push (green up arrow)
 - If you get message HEAD -> main at the end,  it worked.
 
-**Always** do in this order: save file > pull changes > commit > push
+**Always** do in this order: **pull branches** > make edits > save file > pull branches > commit > push
 
