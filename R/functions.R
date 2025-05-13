@@ -2,7 +2,7 @@ read_clean_join <- function(pat) {
   temp <- read_xlsx(here("current_data", "ita", list.files(here("current_data", "ita"), pattern = pat))) %>%
     clean_names() %>%
     mutate(noc_code = as.character(noc_code_2021)) %>%
-    full_join(mapping, by = "noc_code") %>%
+    left_join(mapping, by = "noc_code") %>%
     rename(
       year = contains("year"),
       month = contains("month")
@@ -94,8 +94,6 @@ camel_to_title <- function(tbbl) {
     tibble() %>%
     mutate(across(where(is.character), make_title))
 }
-
-
 
 filter_and_select <- function(tbbl, var, value) {
   tbbl %>%

@@ -18,26 +18,37 @@ library(here)
 library(janitor)
 library(conflicted)
 conflicts_prefer(dplyr::filter)
+source(here("R", "functions.R"))
 # read in the data----------------
+mapping <- read_csv(here("current_data","mapping","mapping.csv"))|>
+  mutate(stc_=if_else(stc=="STC Trades", "STC Trades", NA_character_))
+# new_reg <- read_xlsx(here("current_data",
+#                           "ita",
+#                           list.files(here("current_data",
+#                                           "ita"),
+#                                      pattern = "New_Apprenticeship_Registrations"))) |>
+#   clean_names()|>
+#   mutate(noc_code = as.character(noc_code_2021)) |>
+#   rename(
+#     year = contains("year"),
+#     month = contains("month")
+#   )|>
+#   mutate(short_month=as.numeric(str_sub(month,1, 2)),
+#          date=lubridate::ym(paste(year, short_month, sep="-")), .after=month,
+#          drname=if_else(drname=="Lower Mainland--Southwest", "Mainland South West",drname),
+#          drname=if_else(drname=="Vancouver Island and Coast", "Vancouver Island Coast",drname),
+#          drname=if_else(drname %in% c("North Coast", "Nechako", "Northeast", "Cariboo"), "North", drname),
+#          drname=if_else(drname %in% c("Kootenay", "Thompson-Okanagan"), "Southeast", drname)
+#   )
 
-new_reg <- read_xlsx(here("current_data",
-                          "ita",
-                          list.files(here("current_data",
-                                          "ita"),
-                                     pattern = "New_Apprenticeship_Registrations"))) |>
-  clean_names()|>
-  mutate(noc_code = as.character(noc_code_2021)) |>
-  rename(
-    year = contains("year"),
-    month = contains("month")
-  )|>
+new_reg <- read_clean_join("New")|>
   mutate(short_month=as.numeric(str_sub(month,1, 2)),
          date=lubridate::ym(paste(year, short_month, sep="-")), .after=month,
          drname=if_else(drname=="Lower Mainland--Southwest", "Mainland South West",drname),
          drname=if_else(drname=="Vancouver Island and Coast", "Vancouver Island Coast",drname),
          drname=if_else(drname %in% c("North Coast", "Nechako", "Northeast", "Cariboo"), "North", drname),
          drname=if_else(drname %in% c("Kootenay", "Thompson-Okanagan"), "Southeast", drname)
-  )
+)
 
 ltm <- lubridate::month(max(new_reg$date)-months(0:2)) #the last three months of data
 ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
@@ -46,10 +57,10 @@ f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd r
 max_year <- max(new_reg$year)
 
 mapping <- new_reg|>
-  select(noc=noc_code, functional_trades_group, stc_trades)|>
+  select(noc=noc_code, functional_trades_group, stc)|>
   mutate(noc=paste0("#",noc))|>
   distinct()|>
-  mutate(stc_trades=if_else(stc_trades=="Y", "STC Trades", NA_character_))|>
+  mutate(stc=if_else(stc=="STC Trades", "STC Trades", NA_character_))|>
   pivot_longer(cols = -noc, values_to = "functional_group")|>
   select(-name)|>
   na.omit()
@@ -97,7 +108,6 @@ lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", 
 employment_raw <- bind_rows(lmo, lfs)|>
   mutate(noc=paste0("#",noc))
 
-
 #aggregate new registrations by year, region, and group-----------
 
 ftg <- new_reg|>
@@ -122,13 +132,13 @@ ftg_everything <- new_reg|>
          )
 
 stc <- new_reg|>
-  filter(stc_trades=="Y")|>
+  filter(stc=="STC Trades")|>
   mutate(group="STC Trades")|>
   group_by(year, drname, group)|>
   summarize(new_reg=sum(count))
 
 stc_bc <- new_reg|>
-  filter(stc_trades=="Y")|>
+  filter(stc=="STC Trades")|>
   mutate(group="STC Trades")|>
   group_by(year, group)|>
   summarize(new_reg=sum(count))|>
