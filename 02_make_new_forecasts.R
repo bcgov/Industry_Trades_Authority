@@ -22,24 +22,6 @@ source(here("R", "functions.R"))
 # read in the data----------------
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))|>
   mutate(stc_=if_else(stc=="STC Trades", "STC Trades", NA_character_))
-# new_reg <- read_xlsx(here("current_data",
-#                           "ita",
-#                           list.files(here("current_data",
-#                                           "ita"),
-#                                      pattern = "New_Apprenticeship_Registrations"))) |>
-#   clean_names()|>
-#   mutate(noc_code = as.character(noc_code_2021)) |>
-#   rename(
-#     year = contains("year"),
-#     month = contains("month")
-#   )|>
-#   mutate(short_month=as.numeric(str_sub(month,1, 2)),
-#          date=lubridate::ym(paste(year, short_month, sep="-")), .after=month,
-#          drname=if_else(drname=="Lower Mainland--Southwest", "Mainland South West",drname),
-#          drname=if_else(drname=="Vancouver Island and Coast", "Vancouver Island Coast",drname),
-#          drname=if_else(drname %in% c("North Coast", "Nechako", "Northeast", "Cariboo"), "North", drname),
-#          drname=if_else(drname %in% c("Kootenay", "Thompson-Okanagan"), "Southeast", drname)
-#   )
 
 new_reg <- read_clean_join("New")|>
   mutate(short_month=as.numeric(str_sub(month,1, 2)),
@@ -56,7 +38,7 @@ f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd r
 #f_weight <- 0 #if last year is complete the backcast and forecasts intersect observed new registrations
 max_year <- max(new_reg$year)
 
-mapping <- new_reg|>
+mapping <- new_reg|> #overwrites the mapping object from above
   select(noc=noc_code, functional_trades_group, stc)|>
   mutate(noc=paste0("#",noc))|>
   distinct()|>
