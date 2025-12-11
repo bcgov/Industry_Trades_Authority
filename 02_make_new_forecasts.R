@@ -18,8 +18,48 @@ library(here)
 library(janitor)
 library(conflicted)
 conflicts_prefer(dplyr::filter)
-source(here("R", "functions.R"))
-# read in the data----------------
+
+read_clean_join <- function(pat) {
+  temp <- read_xlsx(here("current_data", "ita", list.files(here("current_data", "ita"), pattern = pat))) %>%
+    clean_names() %>%
+    mutate(noc_code = as.character(noc_code_2021)) %>%
+    left_join(mapping, by = "noc_code") %>%
+    rename(
+      year = contains("year"),
+      month = contains("month")
+    )
+}
+
+fill_holes <- function(tbbl){
+  tbbl %>%
+    complete(date = seq(min_date, max_date, by = "month"), fill = list(new_reg=0))
+}
+
+backward_annualize <- function(data, date_col, value_col, n = 12) {
+  data %>%
+    arrange(desc({{date_col}})) %>%
+    mutate(exponent = ((row_number() - 1) %/% n)) %>%
+    group_by(exponent) %>%
+    summarise(
+      mid_point=mean({{date_col}}),
+      start = min({{date_col}}),
+      end   = max({{date_col}}),
+      new_reg = sum({{value_col}})
+    )|>
+    filter(start>min(start))# throw out oldest year, typically incomplete.
+}
+
+get_agf <- function(tbbl){
+  start_year <- min(tbbl$year)
+  end_year <- max(tbbl$year)
+  span <- end_year-start_year
+  start_value <- tbbl$employment[tbbl$year==start_year]
+  end_value <- tbbl$employment[tbbl$year==end_year]
+  agf <- (end_value/start_value)^(1/span)
+  return(agf)
+}
+
+# read in the registration data
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))|>
   mutate(stc_=if_else(stc=="STC Trades", "STC Trades", NA_character_))
 
@@ -32,13 +72,10 @@ new_reg <- read_clean_join("New")|>
          drname=if_else(drname %in% c("Kootenay", "Thompson-Okanagan"), "Southeast", drname)
 )
 
-ltm <- lubridate::month(max(new_reg$date)-months(0:2)) #the last three months of data
-ytd <- 1:lubridate::month(max(new_reg$date))  #ytd months
-f_weight <- length(ytd)/12 #this is the weight put on the extrapolation of ytd registrations.
-#f_weight <- 0 #if last year is complete the backcast and forecasts intersect observed new registrations
-max_year <- max(new_reg$year)
+max_date <- max(new_reg$date)
+min_date <- min(new_reg$date)
 
-mapping <- new_reg|> #overwrites the mapping object from above
+mapping <- new_reg|> #overwrites the mapping object from above (done with it)
   select(noc=noc_code, functional_trades_group, stc)|>
   mutate(noc=paste0("#",noc))|>
   distinct()|>
@@ -51,63 +88,24 @@ keep_nocs <- mapping|> #for single counting of employment
   select(noc)|>
   distinct()
 
-#LFS data
-
-lfs <- vroom::vroom(here("current_data","lfs",list.files(here("current_data","lfs"))))|>
-  clean_names()|>
-  mutate(ertab=if_else(is.na(ertab),59, ertab))|>
-  na.omit()|>
-  filter(lf_stat=="Employed",
-         noc_5!="missi",
-         !is.na(noc_5),
-         syear < max_year)|>
-  mutate(year=as.character(syear),
-         geographic_area=case_when(ertab==59~"British Columbia",
-                                   ertab==5910~"Vancouver Island Coast",
-                                   ertab==5920~"Mainland South West",
-                                   ertab %in% c(5930, 5940)~"Southeast",
-                                   ertab %in% c(5950, 5960, 5970, 5980)~"North"),
-         count=count/12)|>
-  select(noc=noc_5, geographic_area, year, count)|>
-  group_by(noc, geographic_area, year)|>
-  summarize(count=sum(count, na.rm=TRUE))
-
-#LMO data
-lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 3)|>
-  pivot_longer(cols=starts_with("2"), names_to="year", values_to = "count")|>
-  clean_names()|>
-  filter(noc!="#T",
-         industry=="All industries",
-         year>=max_year)|>
-  mutate(noc=str_sub(noc, start=2))|>
-  select(noc, geographic_area, year, count)|>
-  mutate(geographic_area=if_else(geographic_area %in% c("Kootenay", "Thompson Okanagan"), "Southeast", geographic_area),
-         geographic_area=if_else(geographic_area %in% c("Cariboo","North Coast & Nechako","North East"), "North", geographic_area)
-         )|>
-  group_by(noc, geographic_area, year)|>
-  summarize(count=sum(count, na.rm = TRUE))
-
-employment_raw <- bind_rows(lmo, lfs)|>
-  mutate(noc=paste0("#",noc))
-
-#aggregate new registrations by year, region, and group-----------
+#aggregate new registrations by date, region, and group-----------
 
 ftg <- new_reg|>
-  group_by(year, drname, group=functional_trades_group)|>
+  group_by(date, drname, group=functional_trades_group)|>
   summarize(new_reg=sum(count))
 
 ftg_bc <- new_reg|>
-  group_by(year, group=functional_trades_group)|>
+  group_by(date, group=functional_trades_group)|>
   summarize(new_reg=sum(count))|>
-  mutate(drname="British Columbia", .after="year")
+  mutate(drname="British Columbia", .after="date")
 
 ftg_group <-  new_reg|>
-  group_by(year, drname)|>
+  group_by(date, drname)|>
   summarize(new_reg=sum(count))|>
   mutate(group="All groups")
 
 ftg_everything <- new_reg|>
-  group_by(year)|>
+  group_by(date)|>
   summarize(new_reg=sum(count))|>
   mutate(group="All groups",
          drname="British Columbia"
@@ -116,117 +114,69 @@ ftg_everything <- new_reg|>
 stc <- new_reg|>
   filter(stc=="STC Trades")|>
   mutate(group="STC Trades")|>
-  group_by(year, drname, group)|>
+  group_by(date, drname, group)|>
   summarize(new_reg=sum(count))
 
 stc_bc <- new_reg|>
   filter(stc=="STC Trades")|>
   mutate(group="STC Trades")|>
-  group_by(year, group)|>
+  group_by(date, group)|>
   summarize(new_reg=sum(count))|>
-  mutate(drname="British Columbia", .after="year")
+  mutate(drname="British Columbia", .after="date")
 
-ftg_and_stc <- bind_rows(ftg, ftg_group, ftg_bc, ftg_everything, stc, stc_bc)
+ftg_and_stc <- bind_rows(ftg, ftg_group, ftg_bc, ftg_everything, stc, stc_bc)|>
+  group_by(drname, group)|>
+  nest()|>
+  rename(registrations=data)|>
+  mutate(registrations=map(registrations, fill_holes),
+         backward_annualized=map(registrations, backward_annualize, date, new_reg)
+         )
 
-if(max(ytd)<12){
-  full_years <- ftg_and_stc|>
-    filter(year<max_year)|>
-    mutate(year=as.character(year)) #necessary for join below
-}else{
-  full_years <-ftg_and_stc|>
-    mutate(year=as.character(year)) #necessary for join below
-}
+# LMO employment forecasts
 
-#use the partial year of data to adjust forecast
-partial_scaled_up <- ftg_and_stc|>
-  filter(year==max_year)|>
-  mutate(year=as.character(year))|> #necessary for join below
-  mutate(scaled_up=(new_reg/length(ytd))*12)|>  #scale up potentially incomplete last year.
-  select(-new_reg)
-
-no_nas <- full_years|>
-  mutate(year=as.numeric(year))|>
-  tsibble::as_tsibble(key=c(drname, group), index = year)|>
-  tsibble::fill_gaps(.full = TRUE, new_reg=0)|>
-  as_tibble()|>
-  mutate(year=as.character(year))|>
-  arrange(year, drname, group)|>
-  bind_rows(partial_scaled_up|>rename(new_reg=scaled_up))#add in scaled up partial year... could be wrong
+lmo <- vroom::vroom(here("current_data", "lmo", list.files(here("current_data", "lmo"), pattern = "employment")), skip = 3)|>
+  pivot_longer(cols=starts_with("2"), names_to="year", values_to = "count")|>
+  clean_names()|>
+  filter(noc!="#T",
+         industry=="All industries")|>
+  select(noc, geographic_area, year, count)|>
+  mutate(geographic_area=if_else(geographic_area %in% c("Kootenay", "Thompson Okanagan"), "Southeast", geographic_area),
+         geographic_area=if_else(geographic_area %in% c("Cariboo","North Coast & Nechako","North East"), "North", geographic_area),
+         year=as.numeric(year)
+  )|>
+  group_by(noc, geographic_area, year)|>
+  summarize(count=sum(count, na.rm = TRUE))
 
 # aggregate employment by year, region, and group-----------
 
-emp_disagg <- employment_raw|>
+emp_disagg <- lmo|>
   full_join(mapping, by="noc", multiple = "all")|>
   filter(!is.na(functional_group))|>
   group_by(year, drname=geographic_area, group=functional_group)|>
-  summarize(employment=sum(count))
+  summarize(employment=sum(count))|>
+  group_by(drname, group)|>
+  nest()
 
-all_groups <- employment_raw|>
+all_groups <- lmo|>
   semi_join(keep_nocs)|> #single counting of NOCs (Nicole spotted)
   group_by(year, drname=geographic_area)|>
   summarize(employment=sum(count))|>
-  mutate(group="All groups")
+  mutate(group="All groups")|>
+  group_by(drname, group)|>
+  nest()
 
-employment <- bind_rows(emp_disagg, all_groups)
+employment <- bind_rows(emp_disagg, all_groups)|>
+  rename(employment=data)|>
+  mutate(agf=map_dbl(employment, get_agf))
 
-reg_and_employment <- full_join(no_nas, employment)|>
-  filter(drname!="NULL")|>
+reg_and_employment <- inner_join(ftg_and_stc, employment)|>
   ungroup()|>
-  arrange(year, group, drname)
+  arrange(group, drname)
+
+write_rds(reg_and_employment, here("processed_data","reg_and_employment.rds"))
+
 
 ################################
-
-for_props <- reg_and_employment|>
-  filter(year %in% c(2016:2024))
-
-prop_reg_annual <- for_props|>
-  group_by(drname, group, year)|>
-  summarize(annual_prop=sum(new_reg)/sum(employment))
-
-prop_reg_mean <- for_props|>
-  group_by(drname, group)|>
-  summarize(prop_mean=sum(new_reg)/sum(employment))
-
-prop_reg <- full_join(prop_reg_annual, prop_reg_mean)
-
-#take a look at the proportions
-ggplot(prop_reg)+
-  geom_line(aes(as.numeric(year), prop_mean), colour="white", lwd=2)+
-  geom_line(aes(as.numeric(year), annual_prop))+
-  facet_grid(drname~group)+
-  labs(x=NULL, y="New Registrations/Employment")+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
-
-prop_reg_wide <- prop_reg|>
-  pivot_wider(names_from = year, values_from=annual_prop, names_prefix = "prop_")
-
-fcast_tbbl <- full_join(reg_and_employment, prop_reg_wide)|>
-  full_join(partial_scaled_up)|>
-  mutate(
-    across(
-      .cols = contains("prop_"),
-      .fns = ~.x*employment
-    )
-  )|>
-  mutate(
-    across(
-      .cols = contains("prop_"),
-      .fns = ~ if_else(is.na(scaled_up),
-                       round(.x),
-                       round(f_weight*scaled_up+(1-f_weight)*.x))
-    )
-  )|>
-  rename(`New Registrations`=new_reg)|>
-  arrange(drname, group)
-
-
-fcast_long <- fcast_tbbl|>
-  select(year, drname, group, `New Registrations`, contains("prop"))|>
-  pivot_longer(cols=c(`New Registrations`, contains("prop")))|>
-  mutate(year=as.numeric(year))
-
-write_rds(fcast_tbbl, here("processed_data", "fcast_tbbl.RDS"))
-write_rds(fcast_long, here("processed_data", "fcast_long.RDS"))
 
 #for slide deck-------------------
 

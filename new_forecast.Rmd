@@ -1,0 +1,262 @@
+---
+title: "New Registration Forecasts"
+output: flexdashboard::flex_dashboard
+runtime: shiny
+resource_files:
+- processed_data/reg_and_employment.rds
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(here)
+library(plotly)
+library(gt)
+library(gtExtras)
+library(ggalluvial)
+library(DT)
+library(conflicted)
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(plotly::layout)
+#read in the data
+reg_and_employment <- read_rds(here("processed_data","reg_and_employment.rds"))
+regions <- unique(reg_and_employment$drname)
+
+#functions-----------------------
+get_base <- function(tbbl, alpha){
+  value <- tbbl|>
+    mutate(raw=(1-alpha)^exponent,
+           weight=raw/sum(raw),
+           weighted_reg=new_reg*weight)|>
+    summarize(sum(weighted_reg))|>
+    pull()
+  date <- max(tbbl$mid_point)
+  list(value=value, date=date)
+}
+
+make_forecast <- function(base, agf){
+  tbbl <- tibble(exponent=1:11,
+                 date=base$date+years(1:11),
+                 new_reg_fcast=base$value*agf^exponent)|>
+    mutate(cagr=agf-1)|>
+    select(-exponent)
+}  
+my_dt <- function(tbbl, round_digits=0) {
+  datatable(
+  tbbl,
+  filter = 'top',
+  extensions = "Buttons",
+  rownames = FALSE,
+  options = list(
+    columnDefs = list(list(className = "dt-center", targets = "_all")),
+    paging = TRUE,
+    scrollX = TRUE,
+    scrollY = TRUE,
+    searching = TRUE,
+    ordering = TRUE,
+    dom = "Btip",
+    buttons = list(
+      list(extend = "csv", filename = "trades_forecast"),
+      list(
+        extend = "excel",
+        filename = "trades_forecast",
+        exportOptions = list(
+          format = list(
+            body = JS("
+              function ( data, row, column, node ) {
+                // Remove % and commas
+                var clean = data.replace(/[%,$]/g,'');
+                var num = parseFloat(clean);
+                return isNaN(num) ? data : num;
+              }
+            ")
+          )
+        )
+      )
+    ),
+    pageLength = -1
+  )
+) %>%
+  formatRound("value", digits = 0) %>%
+  formatPercentage("cagr", digits = 2)
+}  
+```
+
+
+Backward Annualization
+=====================================
+
+Inputs {.sidebar data-width=300}
+-------------------------------------
+
+-  Creating an annual forecast from monthly data can be tricky, as the final year of data is incomplete $\frac{11}{12}$ths of the time.
+-  If we backwards annualize the data, the incomplete year of data moves to the beginning of the dataset, which is discarded.
+
+
+Column
+-------------------------------------
+
+### Backward Annualization
+
+```{r}
+all_bc <- reg_and_employment[[3]][[11]]|>
+  arrange(desc(date))|>
+    mutate(years_ago = as.factor(((row_number() - 1) %/% 12)))|>
+  head(n=30)|>
+  group_by(years_ago)|>
+  mutate(date = format(date, "%Y-%m")#,
+  #       years_ago=fct_rev(years_ago)
+         )
+
+ggplot(data = all_bc,
+       aes(axis1 = date, axis2 = years_ago,
+           y = new_reg)) +
+  scale_x_discrete(limits = c("Date", "Years Ago")) +
+  scale_y_continuous(labels=scales::comma)+
+  geom_alluvium(aes(fill = years_ago)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme_void()+
+  labs(y=NULL,
+       fill="Years Ago")
+
+```
+
+Plots
+=====================================  
+
+
+Inputs {.sidebar data-width=300}
+-------------------------------------
+
+```{r}
+selectInput(
+  "region",
+  "Choose a region:",
+  regions,
+  selected = "British Columbia"
+)
+```
+
+-  New registrations are forecast to grow at the same rate as LMO employment (for the NOCs associated with each trade).
+-  The next step is to establish a base to apply the LMO growth rates.
+-  The base is a weighted average of backward annualized new registrations.
+-  Optimal weight depends on your belief regarding the signal/noise ratio of historic new registrations.
+-  If you believe no noise then optimal weight=1.  
+-  Greater the noise, lower the optimal weight.
+
+
+```{r}
+sliderInput("alpha",
+            "Choose a weight:",
+            min = 0.5,
+            max = 1,
+            value = 0.75,
+            step = 0.05
+            )
+
+render_gt({
+  req(input$alpha)
+  df <- weights_reactive()
+  gt(df) %>%
+    fmt_percent(columns = "weight", decimals = 1)
+})
+```
+
+
+```{r}
+#reactive elements----------------------------------------
+reg_emp_alpha <- reactive({
+  reg_and_employment|>
+  mutate(base=map(backward_annualized, get_base, input$alpha),
+         forecast=map2(base, agf, make_forecast)
+         )
+})
+
+historic <- reactive({
+  reg_emp_alpha()|>
+  select(drname, group, backward_annualized)|>
+  unnest(backward_annualized)|>
+  select(drname, group, date=mid_point, value=new_reg)|>
+  mutate(series="Backward Annualized Registrations")
+})
+
+forecast <- reactive({
+  reg_emp_alpha()|>
+  select(drname, group, forecast)|>
+  unnest(forecast)|>
+  select(drname, group, date, value=new_reg_fcast, cagr)|>
+  mutate(series="Forecast")
+})
+
+all_data <- reactive({
+  bind_rows(historic(), forecast())|>
+    arrange(drname, group, date)
+})
+
+for_plot <- reactive({
+  all_data()|>
+  filter(drname==input$region)
+})
+
+weights_reactive <- reactive({
+  tibble(exponent=reg_and_employment[[4]][[1]]$exponent, 
+                          weight=(1-input$alpha)^exponent)|>
+    mutate(weight=weight/sum(weight),
+           `years ago`=exponent)|>
+    select(`years ago`, weight)
+})
+
+```
+ 
+Column
+-------------------------------------
+    
+### Historic and Forecast New Registrations
+    
+```{r}
+renderPlotly({
+  plt <- ggplot(for_plot(), aes(date, 
+                                value, 
+                                colour=series,
+                                group=series,
+                                text=paste("Date:",
+                                           date,
+                                           "\n Value:",
+                                           scales::comma(value, accuracy = 1),
+                                           "\n CAGR:",
+                                           scales::percent(cagr, accuracy = .01)
+                                           )
+                                )
+                )+
+  geom_line()+
+  facet_wrap(~fct_reorder(group, value, .desc=TRUE), scales="free_y", nrow=4)+
+  labs(colour=NULL,
+       x=NULL,
+       y=NULL)+
+  scale_y_continuous(labels=scales::comma)
+  
+  ggplotly(plt, tooltip = "text")%>%
+  layout(
+    legend = list(
+      orientation = "h",   # horizontal
+      x = 0.5,             # center horizontally
+      xanchor = "center",
+      y = -0.2             # move below the plot (adjust as needed)
+    )
+  )
+})
+```
+    
+Table
+====================================  
+
+```{r}
+DT::renderDT({
+  my_dt(all_data())
+})
+```
+
+
+
+
+
