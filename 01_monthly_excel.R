@@ -13,7 +13,7 @@
 #' NOTE THAT COLUMN NAMES CHANGE IN OCCUPATIONAL CHARACTERISTICS FILE, AND THE lmo_edition NEEDS TO BE CHANGED YEARLY
 
 #constants-----------------
-lmo_edition <- 2024
+lmo_edition <- 2025
 plus_five <- lmo_edition+5
 plus_ten <- lmo_edition+10
 
@@ -24,6 +24,7 @@ library(openxlsx)
 library(here)
 library(janitor)
 library(assertthat)
+library(ggthemes)
 library(conflicted)
 conflicts_prefer(dplyr::filter)
 # functions------------

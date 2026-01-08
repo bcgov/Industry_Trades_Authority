@@ -39,8 +39,54 @@ library(kableExtra)
 library(ggfortify)
 library(grid)
 library(tidyquant)
-add_months <- 1 # once we are in the last add_months of the year we report the forecast for the following year (rather than forecasting the current year.)
+library(plotly)
 source(here("R","functions.R"))
+#constants---------------------------
+alpha <- .75 # the exponential smoothing weight
+#functions-----------------------
+get_base <- function(tbbl, alpha){
+  value <- tbbl|>
+    mutate(raw=(1-alpha)^exponent,
+           weight=raw/sum(raw),
+           weighted_reg=new_reg*weight)|>
+    summarize(sum(weighted_reg))|>
+    pull()
+  date <- max(tbbl$mid_point)
+  list(value=value, date=date)
+}
+
+make_forecast <- function(base, agf){
+  tbbl <- tibble(exponent=1:11,
+                 date=base$date+years(1:11),
+                 new_reg_fcast=base$value*agf^exponent)|>
+    mutate(cagr=agf-1)|>
+    select(-exponent)
+}  
+plot_fcast <- function(tbbl){
+  ggplot(tbbl, aes(date, 
+                                value, 
+                                colour=series,
+                                group=series,
+                                text=paste("Date:",
+                                           date,
+                                           "\n Value:",
+                                           scales::comma(value, accuracy = 1),
+                                           "\n CAGR:",
+                                           scales::percent(cagr, accuracy = .01)
+                                           )
+                                )
+                )+
+  geom_line()+
+  facet_wrap(~fct_reorder(group, value, .desc=TRUE), scales="free_y", nrow=4)+
+  labs(colour=NULL,
+       x=NULL,
+       y=NULL)+
+  scale_y_continuous(labels=scales::comma)
+}
+
+#read in data-------------------------
+reg_and_employment <- read_rds(here("processed_data","reg_and_employment.rds"))
+regions <- unique(reg_and_employment$drname)
 
 theme_set(theme_grey(base_size = 15))
 mapping <- read_csv(here("current_data","mapping","mapping.csv"))
@@ -74,14 +120,26 @@ cofq_app <- cofq_total%>%
 cofq_chal <- cofq_total%>%
   filter(program_type=="Challenge")
 
-bc_fcast <- read_rds(here("processed_data","fcast_long.RDS"))|>
-  filter(drname=="British Columbia")
+#make the forecasts-------------
 
-forecast_growth <- bc_fcast%>%
-  filter(group=="All groups", 
-         name=="prop_mean"
-         )%>%
-  fcast_growth(year(today()+month(add_months)), year(today()+month(add_months)+year(1)))
+reg_emp_alpha <- reg_and_employment|>
+  mutate(base=map(backward_annualized, get_base, alpha),
+         forecast=map2(base, agf, make_forecast)
+         )
+historic <- reg_emp_alpha |>
+  select(drname, group, backward_annualized)|>
+  unnest(backward_annualized)|>
+  select(drname, group, date=mid_point, value=new_reg)|>
+  mutate(series="Backward Annualized Registrations")
+
+forecast <- reg_emp_alpha|>
+  select(drname, group, forecast)|>
+  unnest(forecast)|>
+  select(drname, group, date, value=new_reg_fcast, cagr)|>
+  mutate(series="Forecast")
+
+all_data <- bind_rows(historic, forecast)|>
+    arrange(drname, group, date)
 ```
 
 ## Highlights
@@ -93,7 +151,7 @@ forecast_growth <- bc_fcast%>%
   - Certificates of Qualification issued in `r max_date` were `r describe_change(get_growth(cofq_chal, years, 1))` for Trade Qualifiers.
 
 - Forecast for next year:
-  - Relative to last year, new apprenticeship registrations in `r year(today()+months(add_months))` are forecast to be `r describe_change(forecast_growth)`.
+  - Relative to last year, new apprenticeship registrations in the next 12 months are forecast to be `r scales::percent(head(forecast$cagr[forecast$drname=="British Columbia" & forecast$group=="All groups"], n=1), accuracy=.01)` higher.
 
 ## New Apprentice Registrations: [Total*](#Total)
 ::: columns 
@@ -183,36 +241,25 @@ decomp_plot(cofq_chal)
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+### \textcolor{bcblue}{New Forecast Method} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
-bc_fcast|>
-  filter(group=="All groups")|>
-  plot_casts()
+all_groups <- all_data|>
+  filter(drname=="British Columbia",
+         group=="All groups")
 
-get_fcast <- function(grp, yr, nm){
-  bc_fcast%>%
-    filter(year==yr, 
-           group==grp,
-           name==nm)%>%
-    pull(value)
-}
+all_groups_fyof <- all_groups|>
+  filter(series=="Forecast")|>
+  filter(date==min(date))|>
+  pull(value)|>
+  scales::comma()
 
-get_cagr <- function(grp){
-  current_year <- year(today())
-  future_year <- max(bc_fcast$year)
-  current_forecast <- get_fcast(grp, current_year, "prop_mean")
-  future_forecast <- get_fcast(grp, future_year, "prop_mean")
-  scales::percent((future_forecast/current_forecast)^(1/(future_year-current_year))-1, accuracy = .1)  
-}
-
+plot_fcast(all_groups)
 ```
 ::::
 ::::  {.column width=.35}
-- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
-- Light red lines based on individual year proportions.
-- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
-- In `r year(today())` new registrations are forecast to be `r get_fcast("All groups", year(today()), "prop_mean")%>%scales::comma()`.
-- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("All groups")`
+- Base value is an exponential weighted average of historic new registrations.
+- New registrations assumed to grow at same rate as associated occupations (from LMO): `r scales::percent(tail(all_groups$cagr, n=1), accuracy=.01)`
+- Over the next 12 months new registrations are forecast to be `r all_groups_fyof`.
 ::::
 :::
 
@@ -222,19 +269,25 @@ get_cagr <- function(grp){
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+### \textcolor{bcblue}{New Forecast Method} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
- bc_fcast|>
-  filter(group=="STC Trades")|>
-  plot_casts()
+stc_bc <- all_data|>
+  filter(drname=="British Columbia",
+         group=="STC Trades")
+
+stc_bc_fyof <- stc_bc|>
+  filter(series=="Forecast")|>
+  filter(date==min(date))|>
+  pull(value)|>
+  scales::comma()
+
+  plot_fcast(stc_bc)
 ```
 ::::
 ::::  {.column width=.35}
-- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
-- Light red lines based on individual year proportions.
-- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
-- In `r year(today())` new registrations are forecast to be `r get_fcast("STC Trades", year(today()), "prop_mean")%>%scales::comma()`.
-- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("STC Trades")`
+- Base value is an exponential weighted average of historic new registrations.
+- New registrations assumed to grow at same rate as associated occupations (from LMO): `r scales::percent(tail(stc_bc$cagr, n=1), accuracy=.01)`
+- Over the next 12 months new registrations are forecast to be `r stc_bc_fyof`.
 ::::
 :::
 
@@ -243,19 +296,25 @@ get_cagr <- function(grp){
 :::: {.column width=.05}
 ::::
 :::: {.column width=.6}
-### \textcolor{bcblue}{Demand driven forecast: proportion of employment} 
+### \textcolor{bcblue}{New Forecast Method} 
 ```{r, echo=FALSE, fig.show='hold', fig.height=6}
- bc_fcast|>
-  filter(group=="Structural Building Trades")|>
-  plot_casts()
+sbt_bc <- all_data|>
+  filter(drname=="British Columbia",
+         group=="Structural Building Trades")
+
+sbt_bc_fyof <- sbt_bc|>
+  filter(series=="Forecast")|>
+  filter(date==min(date))|>
+  pull(value)|>
+  scales::comma()
+
+plot_fcast(sbt_bc)
 ```
 ::::
 ::::  {.column width=.35}
-- Black line is annual registrations `r paste(year(min(new_reg_total$date)), year(max(new_reg_total$date))-1, sep="-")`, and scaled up monthly registrations for `r year(max(new_reg_total$date))`.
-- Light red lines based on individual year proportions.
-- Dark red line based on a multi-year proportion: $\scriptscriptstyle \frac{\sum_{2016}^{2024}registrations}{\sum_{2016}^{2024}employment}$. 
-- In `r year(today())` new registrations are forecast to be `r get_fcast("Structural Building Trades", year(today()),"prop_mean")%>%scales::comma()`.
-- The growth rate in new registrations from `r year(today())` to `r max(bc_fcast$year)` is forecast to be `r get_cagr("Structural Building Trades")`
+- Base value is an exponential weighted average of historic new registrations.
+- New registrations assumed to grow at same rate as associated occupations (from LMO): `r scales::percent(tail(sbt_bc$cagr, n=1), accuracy=.01)`
+- Over the next 12 months new registrations are forecast to be `r sbt_bc_fyof`.
 ::::
 :::
 

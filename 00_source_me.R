@@ -48,9 +48,6 @@ filesstrings::file.move(here("out","current_output", list.files(here("out", "cur
 #create new output
 source("01_monthly_excel.R")
 source("02_make_new_forecasts.R") #changed methodology
-rmarkdown::render("03_forecast_dashboard.Rmd",
-                  output_file =  str_replace_all(paste0("ita_forecasts_",lubridate::today(),".html")," ","_"),
-                  output_dir = here::here("out","current_output"))
 rmarkdown::render("04_slide_deck.Rmd",
                   output_file =  str_replace_all(paste0("ita_slides_",lubridate::today(),".pdf")," ","_"),
                   output_dir = here::here("out","current_output"))
